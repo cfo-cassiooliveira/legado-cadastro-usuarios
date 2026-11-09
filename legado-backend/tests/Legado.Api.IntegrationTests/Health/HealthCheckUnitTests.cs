@@ -1,7 +1,10 @@
 using System.Net;
 using Legado.Api.Health;
 using Legado.Api.IntegrationTests.Infrastructure;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
@@ -22,14 +25,18 @@ public sealed class HealthCheckUnitTests
     }
 
     [Fact]
-    public async Task ExternalService_WhenUnreachable_ReportsDegradedWithoutException()
+    public async Task ExternalService_WhenUnreachable_ReportsDegradedAndLogsError()
     {
-        var check = CreateExternalCheck(new ThrowingHandler());
+        var logger = new FakeLogger<ExternalServiceHealthCheck>();
+        var check = CreateExternalCheck(new ThrowingHandler(), logger);
 
         var result = await check.CheckHealthAsync(ContextFor(check, HealthStatus.Degraded), TestContext.Current.CancellationToken);
 
         result.Status.ShouldBe(HealthStatus.Degraded);
         result.Exception.ShouldBeNull();
+        // Regra de log: exceção capturada é sempre Error, com a exceção para rastreio.
+        logger.LatestRecord.Level.ShouldBe(LogLevel.Error);
+        logger.LatestRecord.Exception.ShouldBeOfType<HttpRequestException>();
     }
 
     [Fact]
@@ -57,8 +64,50 @@ public sealed class HealthCheckUnitTests
         result.Data.Keys.ShouldContain("thread_count");
     }
 
-    private static ExternalServiceHealthCheck CreateExternalCheck(HttpMessageHandler handler) =>
-        new(new SingleClientFactory(handler), "probe", new Uri("status", UriKind.Relative));
+    [Fact]
+    public async Task ExternalService_RepeatedChecks_ReuseCachedProbeResult()
+    {
+        var handler = new CountingHandler();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var check = CreateExternalCheck(handler, cache: cache);
+
+        var first = await check.CheckHealthAsync(ContextFor(check, HealthStatus.Degraded), TestContext.Current.CancellationToken);
+        var second = await check.CheckHealthAsync(ContextFor(check, HealthStatus.Degraded), TestContext.Current.CancellationToken);
+
+        handler.Calls.ShouldBe(1);
+        second.Status.ShouldBe(first.Status);
+    }
+
+    [Fact]
+    public async Task ExternalService_WhenUnreachable_LogsErrorOncePerCacheWindow()
+    {
+        var logger = new FakeLogger<ExternalServiceHealthCheck>();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var check = CreateExternalCheck(new ThrowingHandler(), logger, cache);
+
+        for (var poll = 0; poll < 5; poll++)
+        {
+            await check.CheckHealthAsync(ContextFor(check, HealthStatus.Degraded), TestContext.Current.CancellationToken);
+        }
+
+        logger.Collector.Count.ShouldBe(1);
+    }
+
+    private static ExternalServiceHealthCheck CreateExternalCheck(
+        HttpMessageHandler handler, FakeLogger<ExternalServiceHealthCheck>? logger = null, IMemoryCache? cache = null) =>
+        new(new SingleClientFactory(handler), "probe", new Uri("status", UriKind.Relative),
+            cache ?? new MemoryCache(new MemoryCacheOptions()), logger ?? new FakeLogger<ExternalServiceHealthCheck>());
+
+    private sealed class CountingHandler : HttpMessageHandler
+    {
+        public int Calls { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
 
     private static HealthCheckContext ContextFor(IHealthCheck check, HealthStatus failureStatus) => new()
     {

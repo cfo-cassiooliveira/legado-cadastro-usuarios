@@ -47,6 +47,15 @@ docker-compose.yml sqlserver -> migrator -> api -> web
 - Testes .NET: xUnit v3 no **Microsoft.Testing.Platform** (`global.json`) e cobertura via
   `Microsoft.Testing.Extensions.CodeCoverage`.
 - Health checks: `/health/live`, `/health/ready` (SQL Server) e `/health` (detalhado), só na rede interna.
+- Logs: Graylog do projeto `../graylog` via `docker-compose.graylog.yml` (ADR-0003). API → GELF TCP; demais
+  containers → Docker GELF driver em `udp://127.0.0.1:12201` com `tag` = `service_name`. Todo log novo usa
+  `[LoggerMessage]`/message template e **nunca** dado pessoal ou segredo (os testes em
+  `tests/Legado.Api.IntegrationTests/Logging/` inspecionam os eventos reais).
+- Níveis (regra em `observability.md`): exceção capturada = Error; falha de negócio ou falha prevista de banco
+  (unicidade/concorrência) = Warning + resultado tratado; sucesso = Information. Frontend usa `AppLogger`
+  (`POST /api/v1/client-logs`) e o `GlobalErrorHandler`; todo catch passa pelo logger.
+- Serilog com `preserveStaticLogger: true` e request logging com o logger do host: nunca dependa do `Log.Logger`
+  estático (um host descartado o encerrava e silenciava os logs dos outros).
 
 ## Comandos
 

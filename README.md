@@ -78,6 +78,7 @@ A API também não sobe sem uma `JWT_SIGNING_KEY` válida, nem com `SEED_ENABLED
 | GET | `/users?page=&pageSize=` | Admin (`users:read`) |
 | GET | `/addresses/postal-codes/{cep}` | anônimo (rate limit) |
 | GET | `/addresses/states/{uf}/cities` | anônimo (rate limit + cache) |
+| POST | `/client-logs` | anônimo (rate limit); eventos de log do navegador, validados e saneados |
 
 Erros seguem o **Problem Details (RFC 9457)** com códigos estáveis em `errors` (ex.: `{"email": ["email.taken"]}`).
 
@@ -100,6 +101,48 @@ Chamar a API autenticada exige **duas coisas juntas**: o header `Authorization: 
 Cada linha tem teste automatizado em `legado-backend/tests/Legado.Api.IntegrationTests/Security/`.
 Os mesmos ataques também foram reproduzidos no navegador real (Edge, via Playwright).
 Riscos aceitos e decisão completa: [ADR-0001](docs/adr/0001-autenticacao-propria-legada.md).
+
+## Logs centralizados (Graylog)
+
+Os logs de todos os serviços podem ir para o Graylog do projeto [`../graylog`](../graylog), que é opcional.
+Decisão completa: [ADR-0003](docs/adr/0003-logs-centralizados-graylog.md).
+
+```bash
+# 1) Suba o Graylog (uma vez):     cd ../graylog && ./scripts/generate-env.sh && docker compose up -d --build
+# 2) Suba o legado com o override:
+docker compose -f docker-compose.yml -f docker-compose.graylog.yml up -d --build
+```
+
+Abra **http://localhost:9000** (usuário `admin`, senha em `../graylog/.env`) e use os streams:
+
+| Stream | Origem | O que tem |
+|---|---|---|
+| `Legado - API` | Serilog → GELF TCP | Todo log da API, com `trace_id`, `span_id`, `correlation_id`, `request_id`, `user_id`, `message_template`, endpoint, status e latência |
+| `Legado - Web (nginx)` | Docker GELF (UDP) | Access log JSON → `http_method`, `http_path`, `http_status`, `http_request_time`, `http_upstream_time`... |
+| `Legado - Infra` | Docker GELF (UDP) | SQL Server e migrator |
+| `Legado - Erros` | todos | Só erros reais (5xx, exceções); avisos do stderr recebem o nível correto |
+| `Legado - Segurança` | API | Login (sucesso, falha, bloqueio), logout, token recusado, rate limit |
+| `Legado - Navegador` | Frontend → `POST /api/v1/client-logs` | Erros JavaScript, falhas e operações da tela (`ClientEvent`, `ClientSource`, `ClientStatus`, stack) |
+
+Para seguir uma requisição de ponta a ponta, busque `correlation_id:<id>` (vem do navegador) ou `request_id:<id>`
+(gerado no nginx e repassado à API). Alertas já provisionados: erros, erros no navegador, falhas de autenticação
+em massa, rate limit, API lenta e 5xx no nginx.
+
+### Níveis de log (regra do workspace)
+
+| Situação | Nível | Exemplos no legado |
+|---|---|---|
+| Exceção capturada (qualquer `catch` que trata) | **Error** + exceção | ViaCEP/IBGE fora, requisição malformada, sonda de health falhando, erro JS (`ErrorHandler` global), falha de rede no navegador |
+| Falha de negócio esperada | **Warning** | Senha errada, conta bloqueada, token recusado, rate limit, cadastro rejeitado, CEP inexistente |
+| Falha prevista de banco (insert/update) | **Warning** + 409 | Login/e-mail duplicado em corrida (índice único), conflito de concorrência ao revogar sessão |
+| Operação concluída | **Information** | Cadastro, login, logout |
+
+No frontend, o `AppLogger` envia cada evento para a API (só código do evento, tela e status, nunca valores
+digitados ou URLs). Os testes de backend e frontend verificam o nível de cada um desses cenários.
+
+**O que nunca vai para os logs**: senha, token, fingerprint, cookie, `Authorization`, query string, corpo de
+requisição, e-mail, nome, celular e IP. Isso é garantido por teste de integração que inspeciona os eventos reais;
+o Graylog ainda mascara e-mail e CPF como defesa em profundidade.
 
 ## Health checks (rede interna)
 

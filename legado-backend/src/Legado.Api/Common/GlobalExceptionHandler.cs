@@ -15,8 +15,8 @@ internal sealed partial class GlobalExceptionHandler(
         ProblemDetails problem;
         if (exception is BadHttpRequestException badRequest)
         {
-            // Requisição malformada (ex.: JSON/UTF-8 inválido) é erro do cliente, não falha do servidor.
-            LogBadRequest(badRequest.StatusCode);
+            // Requisição malformada (ex.: JSON/UTF-8 inválido): responde 400, mas é exceção capturada → Error (regra de log).
+            LogBadRequest(badRequest, badRequest.StatusCode);
             problem = new ProblemDetails
             {
                 Status = badRequest.StatusCode,
@@ -52,10 +52,11 @@ internal sealed partial class GlobalExceptionHandler(
         });
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Malformed request rejected with status {StatusCode}")]
-    private partial void LogBadRequest(int statusCode);
+    // Regra de log do workspace: toda exceção capturada é registrada como Error, com a exceção completa.
+    [LoggerMessage(Level = LogLevel.Error, Message = "Malformed request rejected with status {StatusCode}")]
+    private partial void LogBadRequest(Exception exception, int statusCode);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "External address service unavailable")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "External address service unavailable")]
     private partial void LogDependencyUnavailable(Exception exception);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Unhandled exception while processing the request")]

@@ -8,6 +8,7 @@ import {
   CORRELATION_ID_HEADER,
   correlationIdInterceptor,
 } from '../core/correlation-id.interceptor';
+import { createLoggerSpy, provideLoggerSpy } from '../core/app-logger.testing';
 import { AuthStore } from './auth-store';
 import { authInterceptor } from './auth.interceptor';
 
@@ -15,6 +16,7 @@ describe('authInterceptor', () => {
   const token = signal<string | null>('jwt');
   const clearSession = vi.fn();
   const navigate = vi.fn().mockResolvedValue(true);
+  const logger = createLoggerSpy();
   let http: HttpClient;
   let controller: HttpTestingController;
 
@@ -28,6 +30,7 @@ describe('authInterceptor', () => {
         provideHttpClientTesting(),
         { provide: AuthStore, useValue: { accessToken: token, clearSession } },
         { provide: Router, useValue: { navigate } },
+        provideLoggerSpy(logger),
       ],
     });
     http = TestBed.inject(HttpClient);
@@ -67,6 +70,10 @@ describe('authInterceptor', () => {
 
     await expect(call).rejects.toBeTruthy();
     expect(clearSession).toHaveBeenCalledOnce();
+    expect(logger.warning).toHaveBeenCalledWith('auth.session_rejected', {
+      source: 'auth-interceptor',
+      status: 401,
+    });
     expect(navigate).toHaveBeenCalledWith(['/login']);
   });
 });

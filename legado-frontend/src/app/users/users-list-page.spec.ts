@@ -1,9 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { createLoggerSpy, provideLoggerSpy } from '../core/app-logger.testing';
 import { UsersListPage } from './users-list-page';
 
 describe('UsersListPage', () => {
+  const logger = createLoggerSpy();
   let fixture: ComponentFixture<UsersListPage>;
   let element: HTMLElement;
   let http: HttpTestingController;
@@ -11,7 +13,7 @@ describe('UsersListPage', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({
       imports: [UsersListPage],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideLoggerSpy(logger)],
     });
     fixture = TestBed.createComponent(UsersListPage);
     element = fixture.nativeElement as HTMLElement;
@@ -90,5 +92,10 @@ describe('UsersListPage', () => {
     await respond('/api/v1/users?page=1&pageSize=10', {}, 500);
 
     expect(element.textContent).toContain('Não foi possível carregar os usuários.');
+    expect(logger.error).toHaveBeenCalledWith(
+      'users.list_load_failed',
+      { source: 'users-list-page' },
+      expect.anything(),
+    );
   });
 });

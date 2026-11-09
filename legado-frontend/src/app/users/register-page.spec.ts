@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { createLoggerSpy, LoggerSpy, provideLoggerSpy } from '../core/app-logger.testing';
 import { RegisterPage } from './register-page';
 import { VALID_REGISTRATION } from './registration-form.spec';
 
@@ -11,14 +12,21 @@ const CITIES_SP = [
 ];
 
 describe('RegisterPage (wizard)', () => {
+  let logger: LoggerSpy;
   let fixture: ComponentFixture<RegisterPage>;
   let element: HTMLElement;
   let http: HttpTestingController;
 
   beforeEach(async () => {
+    logger = createLoggerSpy();
     TestBed.configureTestingModule({
       imports: [RegisterPage],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideLoggerSpy(logger),
+      ],
     });
     fixture = TestBed.createComponent(RegisterPage);
     element = fixture.nativeElement as HTMLElement;
@@ -170,6 +178,11 @@ describe('RegisterPage (wizard)', () => {
     await settle();
 
     expect(element.textContent).toContain('CEP não encontrado nos Correios.');
+    expect(logger.warning).toHaveBeenCalledWith('address.postal_code_not_found', {
+      source: 'register-page',
+      status: 404,
+    });
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it('revisão mostra os dados e envia o cadastro sem máscaras', async () => {
@@ -183,6 +196,7 @@ describe('RegisterPage (wizard)', () => {
     await confirmAndRespond({ id: 'new-id' }, 201);
 
     expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { registered: 1 } });
+    expect(logger.info).toHaveBeenCalledWith('users.registered', { source: 'register-page' });
   });
 
   it('erro de duplicidade da API volta ao passo do campo com a mensagem', async () => {
@@ -192,6 +206,12 @@ describe('RegisterPage (wizard)', () => {
 
     expect(currentStepTitle()).toBe('Acesso');
     expect(element.textContent).toContain('Este login já está em uso.');
+    expect(logger.warning).toHaveBeenCalledWith(
+      'users.registration_rejected',
+      { source: 'register-page', status: 409 },
+      'user_name.taken',
+    );
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it('exibe mensagem geral quando o serviço de endereços está indisponível', async () => {
@@ -200,5 +220,42 @@ describe('RegisterPage (wizard)', () => {
     await confirmAndRespond({ code: 'address_service.unavailable' }, 503);
 
     expect(query('.alert--error').textContent).toContain('Serviço de endereços indisponível');
+    expect(logger.error).toHaveBeenCalledWith(
+      'users.registration_failed',
+      { source: 'register-page', status: 503 },
+      expect.anything(),
+    );
+  });
+
+  it('CEP recusado pela API (400) é warning, não error', async () => {
+    await completePersonalStep();
+    await completeAccessStep();
+    type('#postalCode', '00000000');
+    http
+      .expectOne('/api/v1/addresses/postal-codes/00000000')
+      .flush(
+        { errors: { postalCode: ['postal_code.invalid'] } },
+        { status: 400, statusText: 'Bad Request' },
+      );
+    await settle();
+
+    expect(logger.warning).toHaveBeenCalledWith('address.postal_code_rejected', {
+      source: 'register-page',
+      status: 400,
+    });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it('cadastro barrado por rate limit (429) é warning, não error', async () => {
+    await reachReview();
+
+    await confirmAndRespond({}, 429);
+
+    expect(logger.warning).toHaveBeenCalledWith(
+      'users.registration_rejected',
+      { source: 'register-page', status: 429 },
+      '',
+    );
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });

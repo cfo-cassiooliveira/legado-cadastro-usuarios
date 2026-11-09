@@ -2,7 +2,8 @@ using Legado.Application.Addresses;
 using Legado.Application.Users;
 using Legado.Domain.Addresses;
 using Legado.Domain.Common;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
@@ -16,11 +17,12 @@ public sealed class RegisterUserHandlerTests
     private readonly IPostalCodeLookup _postalCodeLookup = Substitute.For<IPostalCodeLookup>();
     private readonly ICityDirectory _cityDirectory = Substitute.For<ICityDirectory>();
     private readonly IUserAccountWriter _userAccountWriter = Substitute.For<IUserAccountWriter>();
+    private readonly FakeLogger<RegisterUserHandler> _logger = new();
     private readonly RegisterUserHandler _handler;
 
     public RegisterUserHandlerTests()
     {
-        _handler = new RegisterUserHandler(_postalCodeLookup, _cityDirectory, _userAccountWriter, NullLogger<RegisterUserHandler>.Instance);
+        _handler = new RegisterUserHandler(_postalCodeLookup, _cityDirectory, _userAccountWriter, _logger);
 
         // Cenário padrão: CEP da Praça da Sé, pertencente a São Paulo/SP.
         _cityDirectory.ListByStateAsync(Arg.Is<StateCode>(s => s.Value == "SP"), Arg.Any<CancellationToken>())
@@ -40,6 +42,7 @@ public sealed class RegisterUserHandlerTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(expectedId);
+        _logger.LatestRecord.Level.ShouldBe(LogLevel.Information);
         await _userAccountWriter.Received(1).CreateAsync(
             Arg.Is<NewUserAccount>(a =>
                 a.UserName.Value == "ana.souza"
@@ -118,6 +121,9 @@ public sealed class RegisterUserHandlerTests
         var result = await _handler.HandleAsync(ValidCommand(), TestContext.Current.CancellationToken);
 
         result.Errors.ShouldHaveSingleItem().ShouldBe(duplicate);
+        // Cadastro rejeitado é falha de negócio prevista: Warning, só com os códigos.
+        _logger.LatestRecord.Level.ShouldBe(LogLevel.Warning);
+        _logger.LatestRecord.Message.ShouldContain("user_name.taken");
     }
 
     [Fact]

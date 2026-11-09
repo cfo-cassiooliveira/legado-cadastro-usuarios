@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpInterceptorFn, HttpStatusCode } from '@angular/c
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { AppLogger } from '../core/app-logger';
 import { AuthStore } from './auth-store';
 
 const API_PREFIX = '/api/';
@@ -10,6 +11,7 @@ const API_PREFIX = '/api/';
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthStore);
   const router = inject(Router);
+  const logger = inject(AppLogger);
   const token = auth.accessToken();
 
   // Só envia o token para a nossa API (mesma origem), nunca para terceiros.
@@ -21,7 +23,11 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   return next(authorized).pipe(
     catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse && error.status === HttpStatusCode.Unauthorized) {
-        // Token já recusado pela API (expirado, revogado ou sem fingerprint): só limpa a sessão local.
+        // Token já recusado pela API (expirado, revogado ou sem fingerprint): aviso esperado; limpa a sessão local.
+        logger.warning('auth.session_rejected', {
+          source: 'auth-interceptor',
+          status: error.status,
+        });
         auth.clearSession();
         void router.navigate(['/login']);
       }

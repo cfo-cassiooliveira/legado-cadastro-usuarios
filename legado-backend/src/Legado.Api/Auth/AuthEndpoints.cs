@@ -24,7 +24,8 @@ internal static class AuthEndpoints
 
         group.MapPost("/logout", LogoutAsync)
             .RequireAuthorization()
-            .Produces(StatusCodes.Status204NoContent);
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return app;
     }
@@ -50,8 +51,9 @@ internal static class AuthEndpoints
     {
         // O principal já passou pela validação completa; o sub é sempre um Guid válido aqui.
         var userId = Guid.Parse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
-        await handler.HandleAsync(userId, cancellationToken);
+        var result = await handler.HandleAsync(userId, cancellationToken);
+        // O cookie é apagado mesmo em conflito: neste navegador a sessão fica inutilizável de qualquer forma.
         FingerprintCookie.Delete(response);
-        return TypedResults.NoContent();
+        return result.IsSuccess ? TypedResults.NoContent() : result.ToProblem();
     }
 }

@@ -47,10 +47,30 @@ internal sealed partial class RegisterUserHandler(
     IUserAccountWriter userAccountWriter,
     ILogger<RegisterUserHandler> logger) : IRegisterUserHandler
 {
-    /// <summary>Valida todos os campos, confere endereço nas fontes oficiais e cria a conta com o perfil User.</summary>
+    /// <summary>
+    /// Valida todos os campos, confere endereço nas fontes oficiais e cria a conta com o perfil User.
+    /// Sucesso é logado como Information e rejeição (dado inválido/duplicado) como Warning, só com os códigos.
+    /// </summary>
     public async Task<Result<Guid>> HandleAsync(RegisterUserCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        var result = await RegisterAsync(command, cancellationToken);
+        if (result.IsSuccess)
+        {
+            LogUserRegistered(result.Value);
+        }
+        else
+        {
+            // Só os códigos dos erros (ex.: email.taken), nunca os valores informados (LGPD).
+            LogRegistrationRejected(string.Join(",", result.Errors.Select(e => e.Code)));
+        }
+
+        return result;
+    }
+
+    private async Task<Result<Guid>> RegisterAsync(RegisterUserCommand command, CancellationToken cancellationToken)
+    {
 
         var errors = new List<DomainError>();
         var fullName = Collect(FullName.Create(command.FullName), errors);
@@ -84,13 +104,7 @@ internal sealed partial class RegisterUserHandler(
         }
 
         var account = new NewUserAccount(userName, fullName, email, mobilePhone, address.Value);
-        var created = await userAccountWriter.CreateAsync(account, command.Password!, cancellationToken); // Senha validada acima.
-        if (created.IsSuccess)
-        {
-            LogUserRegistered(created.Value);
-        }
-
-        return created;
+        return await userAccountWriter.CreateAsync(account, command.Password!, cancellationToken); // Senha validada acima.
     }
 
     /// <summary>Garante que o município pertence à UF e que o CEP é daquele município.</summary>
@@ -127,4 +141,7 @@ internal sealed partial class RegisterUserHandler(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} registered")]
     private partial void LogUserRegistered(Guid userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "User registration rejected: {ErrorCodes}")]
+    private partial void LogRegistrationRejected(string errorCodes);
 }

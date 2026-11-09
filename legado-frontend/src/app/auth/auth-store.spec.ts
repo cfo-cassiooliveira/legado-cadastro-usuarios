@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { UserDetails } from '../users/user.model';
+import { createLoggerSpy, LoggerSpy, provideLoggerSpy } from '../core/app-logger.testing';
 import { AuthStore } from './auth-store';
 
 export const SAMPLE_USER: UserDetails = {
@@ -27,10 +28,12 @@ export const SAMPLE_USER: UserDetails = {
 describe('AuthStore', () => {
   let store: AuthStore;
   let http: HttpTestingController;
+  let logger: LoggerSpy;
 
   beforeEach(() => {
+    logger = createLoggerSpy();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideLoggerSpy(logger)],
     });
     store = TestBed.inject(AuthStore);
     http = TestBed.inject(HttpTestingController);
@@ -117,6 +120,22 @@ describe('AuthStore', () => {
 
     expect(store.isAuthenticated()).toBe(false);
     expect(store.accessToken()).toBeNull();
+    expect(logger.info).toHaveBeenCalledWith('auth.signed_out', { source: 'auth-store' });
+  });
+
+  it('logout com conflito de revogação (409) é warning e limpa a sessão', async () => {
+    await loginAs(SAMPLE_USER);
+
+    const logout = store.logout();
+    http.expectOne('/api/v1/auth/logout').flush(null, { status: 409, statusText: 'Conflict' });
+    await logout;
+
+    expect(store.isAuthenticated()).toBe(false);
+    expect(logger.warning).toHaveBeenCalledWith('auth.sign_out_conflict', {
+      source: 'auth-store',
+      status: 409,
+    });
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it('logout limpa a sessão local mesmo se o servidor falhar', async () => {
@@ -127,6 +146,11 @@ describe('AuthStore', () => {
     await logout;
 
     expect(store.isAuthenticated()).toBe(false);
+    expect(logger.error).toHaveBeenCalledWith(
+      'auth.sign_out_failed',
+      { source: 'auth-store', status: 500 },
+      expect.anything(),
+    );
   });
 
   it('logout sem sessão não chama a API', async () => {
@@ -134,5 +158,17 @@ describe('AuthStore', () => {
 
     http.expectNone('/api/v1/auth/logout');
     expect(store.isAuthenticated()).toBe(false);
+  });
+
+  it('logout com sessão já expirada (401) não registra de novo (o interceptor já registrou)', async () => {
+    await loginAs(SAMPLE_USER);
+
+    const logout = store.logout();
+    http.expectOne('/api/v1/auth/logout').flush(null, { status: 401, statusText: 'Unauthorized' });
+    await logout;
+
+    expect(store.isAuthenticated()).toBe(false);
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(logger.warning).not.toHaveBeenCalled();
   });
 });

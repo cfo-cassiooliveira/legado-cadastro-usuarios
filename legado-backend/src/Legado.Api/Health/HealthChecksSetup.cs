@@ -1,6 +1,7 @@
 using Legado.Infrastructure.Addresses;
 using Legado.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Legado.Api.Health;
@@ -35,12 +36,12 @@ internal static class HealthChecksSetup
             .AddCheck<ProcessHealthCheck>("process", HealthStatus.Degraded, [HealthCheckTags.Process])
             .Add(new HealthCheckRegistration(
                 "viacep",
-                sp => new ExternalServiceHealthCheck(sp.GetRequiredService<IHttpClientFactory>(), ViaCepProbeClient, ViaCepProbePath),
+                sp => new ExternalServiceHealthCheck(sp.GetRequiredService<IHttpClientFactory>(), ViaCepProbeClient, ViaCepProbePath, sp.GetRequiredService<IMemoryCache>(), sp.GetRequiredService<ILogger<ExternalServiceHealthCheck>>()),
                 HealthStatus.Degraded,
                 [HealthCheckTags.External]))
             .Add(new HealthCheckRegistration(
                 "ibge",
-                sp => new ExternalServiceHealthCheck(sp.GetRequiredService<IHttpClientFactory>(), IbgeProbeClient, IbgeProbePath),
+                sp => new ExternalServiceHealthCheck(sp.GetRequiredService<IHttpClientFactory>(), IbgeProbeClient, IbgeProbePath, sp.GetRequiredService<IMemoryCache>(), sp.GetRequiredService<ILogger<ExternalServiceHealthCheck>>()),
                 HealthStatus.Degraded,
                 [HealthCheckTags.External]));
 

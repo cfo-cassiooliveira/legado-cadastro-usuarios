@@ -1,0 +1,43 @@
+# Integração opcional com o Graylog (projeto C:\Workspace\graylog). Requer o Graylog de pé antes.
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.graylog.yml up -d --build
+#
+# - api: Serilog envia GELF por TCP para graylog:12201 pela rede Docker compartilhada "observability".
+# - web, sqlserver e migrator: stdout vai pelo Docker logging driver GELF (UDP) para a porta publicada do Graylog.
+#   Use 127.0.0.1 (não "localhost"): o daemon resolve localhost para ::1 (IPv6) e a porta é publicada só em IPv4.
+#   A "tag" vira o campo service_name no pipeline do Graylog e define o stream de destino.
+services:
+  api:
+    environment:
+      Graylog__Host: graylog
+      Graylog__Port: "12201"
+      Graylog__Transport: Tcp
+    networks:
+      - default
+      - observability
+
+  web:
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: legado-web
+
+  sqlserver:
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: legado-sqlserver
+
+  migrator:
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: legado-migrator
+
+networks:
+  observability:
+    # Criada pelo docker-compose do projeto graylog.
+    external: true

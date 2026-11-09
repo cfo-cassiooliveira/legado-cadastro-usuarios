@@ -1,5 +1,6 @@
 using Legado.Api.Addresses;
 using Legado.Api.Auth;
+using Legado.Api.ClientLogs;
 using Legado.Api.Common;
 using Legado.Api.Health;
 using Legado.Api.Users;
@@ -7,7 +8,6 @@ using Legado.Application;
 using Legado.Infrastructure;
 using Legado.Infrastructure.Seeding;
 using Microsoft.AspNetCore.HttpOverrides;
-using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,10 +38,11 @@ var app = builder.Build();
 app.UseForwardedHeaders();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ApiResponseHeadersMiddleware>();
-app.UseSerilogRequestLogging();
+app.UseLegacyRequestLogging();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
+app.UseMiddleware<UserLogContextMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
 
@@ -57,6 +58,7 @@ app.MapLegacyHealthChecks();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapAddressEndpoints();
+app.MapClientLogEndpoints();
 
 await using (var scope = app.Services.CreateAsyncScope())
 {

@@ -9,6 +9,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Serilog.Core;
 using Testcontainers.MsSql;
 
 namespace Legado.Api.IntegrationTests.Infrastructure;
@@ -23,6 +24,9 @@ public sealed class LegadoApiFactory : WebApplicationFactory<Program>, IAsyncLif
     private readonly MsSqlContainer _database = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2025-latest").Build();
 
     public FakePostalCodeLookup PostalCodes { get; } = new();
+
+    /// <summary>Todos os eventos de log emitidos pela API durante os testes.</summary>
+    public CollectingLogSink Logs { get; } = new();
 
     public async ValueTask InitializeAsync()
     {
@@ -63,6 +67,7 @@ public sealed class LegadoApiFactory : WebApplicationFactory<Program>, IAsyncLif
         builder.UseSetting("Jwt:SigningKey", TestSigningKey);
         builder.UseSetting("RateLimiting:CredentialsPermitsPerMinute", HighRateLimit);
         builder.UseSetting("RateLimiting:AddressLookupPermitsPerMinute", HighRateLimit);
+        builder.UseSetting("RateLimiting:ClientLogsPermitsPerMinute", HighRateLimit);
 
         builder.ConfigureTestServices(services =>
         {
@@ -70,6 +75,8 @@ public sealed class LegadoApiFactory : WebApplicationFactory<Program>, IAsyncLif
             services.RemoveAll<ICityDirectory>();
             services.AddSingleton<IPostalCodeLookup>(PostalCodes);
             services.AddSingleton<ICityDirectory, FakeCityDirectory>();
+            // O Serilog lê sinks do DI (ReadFrom.Services): os testes inspecionam os logs reais.
+            services.AddSingleton<ILogEventSink>(Logs);
 
             // Sondas de health dos serviços externos respondem localmente (sem rede nos testes).
             services.AddHttpClient(HealthChecksSetup.ViaCepProbeClient)

@@ -75,7 +75,7 @@ jobs:
         run: |
           npm ci
           npx ng test --watch=false --coverage --coverage-reporters lcov \
-            --coverage-include "src/app/**/*.ts" --coverage-exclude "src/app/**/*.spec.ts"
+            --coverage-include "src/app/**/*.ts" --coverage-exclude "src/app/**/*.spec.ts" --coverage-exclude "src/app/**/*.testing.ts"
       - run: dotnet tool restore
       - name: SonarQube begin
         run: >
@@ -85,7 +85,7 @@ jobs:
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.coverage.xml"
           /d:sonar.javascript.lcov.reportPaths="legado-frontend/coverage/legado-frontend/lcov.info"
-          /d:sonar.exclusions="**/Migrations/**,**/node_modules/**,**/dist/**,**/*.spec.ts"
+          /d:sonar.exclusions="**/Migrations/**,**/node_modules/**,**/dist/**,**/*.spec.ts,**/*.testing.ts"
           /d:sonar.coverage.exclusions="**/Program.cs,**/Migrations/**,**/DesignTimeDbContextFactory.cs,legado-frontend/src/main.ts,legado-frontend/src/app/app.config.ts,legado-frontend/src/app/app.routes.ts"
           /d:sonar.qualitygate.wait=true
       - run: dotnet build Legado.slnx --configuration Release

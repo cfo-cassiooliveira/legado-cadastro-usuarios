@@ -23,11 +23,14 @@ internal sealed partial class CorrelationIdMiddleware(RequestDelegate next, ILog
         }
     }
 
+    /// <summary>Indica se um id vindo do cliente tem formato seguro para ir aos logs (evita log injection).</summary>
+    public static bool IsSafeId(string? value) => value is not null && SafeIdPattern().IsMatch(value);
+
     private static string ResolveCorrelationId(HttpContext context)
     {
         var incoming = context.Request.Headers[HeaderName].ToString();
         // Aceita só formato seguro para evitar log injection com valor vindo do cliente.
-        if (SafeIdPattern().IsMatch(incoming))
+        if (IsSafeId(incoming))
         {
             return incoming;
         }

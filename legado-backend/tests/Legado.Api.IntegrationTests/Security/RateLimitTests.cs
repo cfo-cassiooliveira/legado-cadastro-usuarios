@@ -28,5 +28,8 @@ public sealed class RateLimitTests(LegadoApiFactory factory)
 
         statuses.Take(Limit).ShouldAllBe(status => status == HttpStatusCode.Unauthorized);
         statuses[Limit].ShouldBe(HttpStatusCode.TooManyRequests);
+        // A rejeição gera evento de segurança (stream "Legado - Segurança" e alerta no Graylog).
+        factory.Logs.Events.ShouldContain(e =>
+            e.Level == Serilog.Events.LogEventLevel.Warning && e.RenderMessage(System.Globalization.CultureInfo.InvariantCulture).StartsWith("Rate limit exceeded on", StringComparison.Ordinal));
     }
 }

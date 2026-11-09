@@ -1,5 +1,8 @@
 using Legado.Application.Auth;
+using Legado.Domain.Common;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 
@@ -74,12 +77,30 @@ public sealed class SessionSecurityTests
     }
 
     [Fact]
-    public async Task Logout_RevokesAllTokensOfTheUser()
+    public async Task Logout_WhenConcurrentUpdatePersists_ReturnsConflictAndLogsWarning()
     {
-        var handler = new LogoutHandler(_store, NullLogger<LogoutHandler>.Instance);
+        var logger = new FakeLogger<LogoutHandler>();
+        var conflict = new DomainError("session.revoke_conflict", "session", "conflict", ErrorType.Conflict);
+        _store.RevokeAllAsync(_userId, Arg.Any<CancellationToken>()).Returns(Result.Failure(conflict));
+        var handler = new LogoutHandler(_store, logger);
 
-        await handler.HandleAsync(_userId, TestContext.Current.CancellationToken);
+        var result = await handler.HandleAsync(_userId, TestContext.Current.CancellationToken);
 
+        result.Errors.ShouldHaveSingleItem().Type.ShouldBe(ErrorType.Conflict);
+        logger.LatestRecord.Level.ShouldBe(LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task Logout_RevokesAllTokensOfTheUserAndLogsInformation()
+    {
+        var logger = new FakeLogger<LogoutHandler>();
+        _store.RevokeAllAsync(_userId, Arg.Any<CancellationToken>()).Returns(Result.Success());
+        var handler = new LogoutHandler(_store, logger);
+
+        var result = await handler.HandleAsync(_userId, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        logger.LatestRecord.Level.ShouldBe(LogLevel.Information);
         await _store.Received(1).RevokeAllAsync(_userId, Arg.Any<CancellationToken>());
     }
 

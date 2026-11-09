@@ -1,11 +1,20 @@
-import { httpResource } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { httpResource, HttpStatusCode } from '@angular/common/http';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { FieldTree, form, FormField, submit, TreeValidationResult } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AddressApi, citiesUrl } from '../addresses/address-api';
 import { City, PostalCodeAddress } from '../addresses/address.model';
+import { AppLogger } from '../core/app-logger';
 import { messageForCode, messageForProblem } from '../core/error-messages';
+import { isExpectedFailure } from '../core/expected-failures';
 import { ApiProblem, toApiProblem } from '../core/problem-details';
 import { AuthHero } from '../shared/auth-hero';
 import { BRAZILIAN_STATES, PASSWORD_RULES } from '../shared/brazil';
@@ -22,7 +31,7 @@ import { UsersApi } from './users-api';
 
 type PostalCodeStatus = 'idle' | 'loading' | 'found' | 'not-found' | 'error';
 
-const HTTP_NOT_FOUND = 404;
+const SOURCE = 'register-page';
 const REVIEW_STEP = REGISTRATION_STEPS.length - 1;
 
 /** Cadastro em assistente (wizard): cada passo valida seus campos antes de avançar. */
@@ -36,6 +45,7 @@ export class RegisterPage {
   private readonly usersApi = inject(UsersApi);
   private readonly addressApi = inject(AddressApi);
   private readonly router = inject(Router);
+  private readonly logger = inject(AppLogger);
 
   protected readonly steps = REGISTRATION_STEPS;
   protected readonly reviewStep = REVIEW_STEP;
@@ -67,6 +77,16 @@ export class RegisterPage {
   protected readonly cityOptions = computed<readonly City[]>(() =>
     this.cities.hasValue() ? this.cities.value() : [],
   );
+
+  constructor() {
+    // Falha ao carregar municípios (httpResource não passa por try/catch): registrada como erro.
+    effect(() => {
+      const error = this.cities.error();
+      if (error) {
+        this.logger.error('address.cities_load_failed', { source: SOURCE }, error);
+      }
+    });
+  }
   protected readonly cityName = computed(
     () =>
       this.cityOptions().find((city) => String(city.ibgeCode) === this.model().cityIbgeCode)
@@ -113,9 +133,19 @@ export class RegisterPage {
       this.fillAddress(address);
       this.postalCodeStatus.set('found');
     } catch (error) {
-      this.postalCodeStatus.set(
-        toApiProblem(error).status === HTTP_NOT_FOUND ? 'not-found' : 'error',
-      );
+      const status = toApiProblem(error).status;
+      if (status === HttpStatusCode.NotFound) {
+        // CEP inexistente é resposta prevista (aviso), não falha do sistema.
+        this.logger.warning('address.postal_code_not_found', { source: SOURCE, status });
+        this.postalCodeStatus.set('not-found');
+      } else if (isExpectedFailure(status)) {
+        // CEP em formato recusado pela API (400) ou rate limit (429): aviso, não erro.
+        this.logger.warning('address.postal_code_rejected', { source: SOURCE, status });
+        this.postalCodeStatus.set('error');
+      } else {
+        this.logger.error('address.postal_code_lookup_failed', { source: SOURCE, status }, error);
+        this.postalCodeStatus.set('error');
+      }
     }
   }
 
@@ -136,12 +166,26 @@ export class RegisterPage {
     await submit(this.registrationForm, async (fields) => {
       try {
         await firstValueFrom(this.usersApi.register(toRegisterRequest(this.model())));
+        this.logger.info('users.registered', { source: SOURCE });
         await this.router.navigate(['/login'], { queryParams: { registered: 1 } });
         return undefined;
       } catch (error) {
-        return this.toFieldErrors(toApiProblem(error), fields);
+        const problem = toApiProblem(error);
+        this.logRegistrationFailure(problem, error);
+        return this.toFieldErrors(problem, fields);
       }
     });
+  }
+
+  /** Validação, duplicidade e rate limit são avisos esperados (só com os códigos); o resto é erro capturado. */
+  private logRegistrationFailure(problem: ApiProblem, error: unknown): void {
+    const { status } = problem;
+    if (isExpectedFailure(status)) {
+      const codes = Object.values(problem.fieldErrors).flat().join(',');
+      this.logger.warning('users.registration_rejected', { source: SOURCE, status }, codes);
+    } else {
+      this.logger.error('users.registration_failed', { source: SOURCE, status }, error);
+    }
   }
 
   private fillAddress(address: PostalCodeAddress): void {

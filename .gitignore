@@ -17,3 +17,6 @@ dist/
 # Relatórios de cobertura
 legado-frontend/coverage/
 *.coverage.xml
+
+# Diretório de trabalho do SonarScanner for .NET (scripts/sonar-analysis.sh)
+.sonarqube/

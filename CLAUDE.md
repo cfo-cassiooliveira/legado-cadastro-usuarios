@@ -65,6 +65,7 @@ dotnet test --solution Legado.slnx                         # integração exige 
 dotnet tool restore && dotnet ef migrations add <Nome> \
   --project legado-database/src/Legado.Database --startup-project legado-database/src/Legado.Database
 cd legado-frontend && npm ci && npx ng test --watch=false && npx ng lint && npx ng build
+./scripts/sonar-analysis.sh                                # SonarQube local (../sonarqube) + Quality Gate (ADR-0004)
 cp .env.example .env && docker compose up -d --build       # http://localhost:4200
 ```
 

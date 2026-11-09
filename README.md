@@ -164,6 +164,20 @@ dotnet test --solution Legado.slnx            # integração sobe SQL Server rea
 cd legado-frontend && npm ci && npx ng test --watch=false && npx ng lint
 ```
 
+### Qualidade (SonarQube)
+
+A análise usa o SonarQube local do projeto [`../sonarqube`](../sonarqube) (http://localhost:9001), com o Quality Gate
+"Workspace Way" (0 issues novas, cobertura ≥ 80%, duplicação ≤ 3% e 100% dos hotspots revisados, sempre em código novo).
+
+```bash
+./scripts/sonar-analysis.sh    # testes com cobertura (front e back), análise e espera do Quality Gate
+```
+
+O script lê o token em `../sonarqube/.tokens/legado-cadastro-usuarios.token` (gerado pelo provisionamento do
+SonarQube) e termina com erro se o gate reprovar. O job `quality-gate` do CI roda o mesmo script, mas só quando os
+segredos `SONAR_TOKEN` e `SONAR_HOST_URL` existem: os runners do GitHub não alcançam o SonarQube local
+([ADR-0004](docs/adr/0004-quality-gate-sonarqube-local.md)).
+
 ## Dados para a migração ao Keycloak
 
 - Tabela `AspNetUsers`: `PasswordHash` no formato Identity V3 (byte `0x01` + PRF SHA-512 + 100.000 iterações +

@@ -92,35 +92,11 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: legado-frontend/package-lock.json
-      - name: Cobertura do frontend (lcov, todos os arquivos)
+      - run: npm ci
         working-directory: legado-frontend
-        run: |
-          npm ci
-          npx ng test --watch=false --coverage --coverage-reporters lcov \
-            --coverage-include "src/app/**/*.ts" --coverage-exclude "src/app/**/*.spec.ts" --coverage-exclude "src/app/**/*.testing.ts"
-      - run: dotnet tool restore
-      - name: SonarQube begin
-        run: >
-          dotnet sonarscanner begin
-          /k:"legado-cadastro-usuarios"
-          /d:sonar.host.url="$SONAR_HOST_URL"
-          /d:sonar.token="$SONAR_TOKEN"
-          /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.coverage.xml"
-          /d:sonar.javascript.lcov.reportPaths="legado-frontend/coverage/legado-frontend/lcov.info"
-          /d:sonar.exclusions="**/Migrations/**,**/node_modules/**,**/dist/**,**/*.spec.ts,**/*.testing.ts"
-          /d:sonar.coverage.exclusions="**/Program.cs,**/Migrations/**,**/DesignTimeDbContextFactory.cs,legado-frontend/src/main.ts,legado-frontend/src/app/app.config.ts,legado-frontend/src/app/app.routes.ts"
-          /d:sonar.qualitygate.wait=true
-      - run: dotnet build Legado.slnx --configuration Release
-      - name: Testes .NET com cobertura (um relatório por projeto)
-        run: |
-          for project in legado-backend/tests/*/; do
-            name=$(basename "$project")
-            dotnet test --project "$project" --no-build --configuration Release \
-              --coverage --coverage-output-format xml --coverage-output "$name.coverage.xml" \
-              --results-directory "$PWD/TestResults"
-          done
-      - name: SonarQube end (falha se o Quality Gate reprovar)
-        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+      # Mesmo script da análise local (fonte única dos parâmetros); falha se o Quality Gate reprovar.
+      - name: SonarQube (cobertura, análise e Quality Gate)
+        run: ./scripts/sonar-analysis.sh
 
   images:
     runs-on: ubuntu-latest

@@ -1,6 +1,8 @@
 # Pipeline de CI do legado: build com warnings como erro, testes, lint, scan de dependências,
 # SonarQube com Quality Gate (Art. V.2/V.3) e build das imagens.
-# Segredos necessários no repositório (Settings > Secrets and variables > Actions), nunca no código:
+# SonarQube é OPCIONAL enquanto o time não tiver um servidor: sem os segredos abaixo o job "quality-gate"
+# é pulado (não falha) e o resto do pipeline segue. Com os segredos, o Quality Gate volta a ser obrigatório.
+# Segredos (Settings > Secrets and variables > Actions), nunca no código:
 #   SONAR_TOKEN     token de análise do SonarQube
 #   SONAR_HOST_URL  URL do SonarQube Server do time
 name: ci
@@ -47,10 +49,30 @@ jobs:
       - run: npx ng build
       - run: npm audit --omit=dev
 
+  sonar-config:
+    # O "if" de um job não lê secrets diretamente: este passo publica se o SonarQube está configurado.
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          if [ -n "$SONAR_TOKEN" ] && [ -n "$SONAR_HOST_URL" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=SonarQube não configurado::Defina SONAR_TOKEN e SONAR_HOST_URL para ativar o Quality Gate."
+          fi
+
   quality-gate:
     # Análise SonarQube do backend e do frontend; o job falha se o Quality Gate reprovar.
+    # Só roda quando os segredos do Sonar existem (ver job sonar-config).
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
+    needs: [backend, frontend, sonar-config]
+    if: needs.sonar-config.outputs.enabled == 'true'
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -102,7 +124,13 @@ jobs:
 
   images:
     runs-on: ubuntu-latest
-    needs: [quality-gate]
+    needs: [backend, frontend, quality-gate]
+    # Roda com o Sonar aprovado OU pulado (não configurado); nunca com o Quality Gate reprovado.
+    if: >-
+      always() &&
+      needs.backend.result == 'success' &&
+      needs.frontend.result == 'success' &&
+      (needs.quality-gate.result == 'success' || needs.quality-gate.result == 'skipped')
     steps:
       - uses: actions/checkout@v4
       - name: Build das imagens (com .env descartável apenas para validar o compose)

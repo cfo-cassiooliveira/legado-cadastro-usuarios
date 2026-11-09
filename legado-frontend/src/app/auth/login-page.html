@@ -1,0 +1,63 @@
+<div class="auth-layout">
+  <app-auth-hero
+    i18n-headline
+    headline="Bem-vindo de volta"
+    i18n-description
+    description="Acesse sua conta para consultar e manter seus dados cadastrais."
+  />
+
+  <div class="auth-content">
+    <section class="card card--narrow">
+      <header class="card-header">
+        <h1 i18n>Entrar</h1>
+        <p i18n>Use o login e a senha cadastrados.</p>
+      </header>
+
+      @if (registered()) {
+        <p class="alert alert--success" role="status" i18n>
+          Cadastro realizado! Entre com seu login e senha.
+        </p>
+      }
+      @if (errorMessage(); as message) {
+        <p class="alert alert--error" role="alert">{{ message }}</p>
+      }
+
+      <form (submit)="signIn($event)" novalidate>
+        <div class="form-grid">
+          <div class="field col-6" [class.field--invalid]="showInvalid(loginForm.userName())">
+            <label for="userName" i18n>Login</label>
+            <input id="userName" autocomplete="username" [formField]="loginForm.userName" />
+            <app-field-errors [state]="loginForm.userName()" />
+          </div>
+          <div class="field col-6" [class.field--invalid]="showInvalid(loginForm.password())">
+            <label for="password" i18n>Senha</label>
+            <input
+              id="password"
+              type="password"
+              autocomplete="current-password"
+              [formField]="loginForm.password"
+            />
+            <app-field-errors [state]="loginForm.password()" />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn--primary btn--block"
+          [style.margin-top.rem]="1.75"
+          [disabled]="loginForm().submitting()"
+        >
+          @if (loginForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          <ng-container i18n>Entrar</ng-container>
+        </button>
+      </form>
+
+      <p class="form-footer">
+        <ng-container i18n>Ainda não tem conta?</ng-container>
+        <a routerLink="/register" i18n>Cadastre-se</a>
+      </p>
+    </section>
+  </div>
+</div>

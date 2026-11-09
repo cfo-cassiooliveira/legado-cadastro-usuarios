@@ -1,0 +1,362 @@
+<div class="auth-layout">
+  <app-auth-hero
+    i18n-headline
+    headline="Crie sua conta em poucos passos"
+    i18n-description
+    description="Preencha seus dados, defina seu acesso e informe o endereço. Nós validamos tudo para você."
+  />
+
+  <div class="auth-content">
+    <section class="card">
+      <header class="card-header">
+        <h1 i18n>Cadastro de usuário</h1>
+        <p i18n>Passo {{ currentStep() + 1 }} de {{ steps.length }}</p>
+      </header>
+
+      <ol class="stepper" aria-label="Progresso do cadastro" i18n-aria-label>
+        @for (item of steps; track item.title; let index = $index) {
+          <li
+            class="stepper__item"
+            [class.stepper__item--current]="index === currentStep()"
+            [class.stepper__item--done]="index < currentStep()"
+            [attr.aria-current]="index === currentStep() ? 'step' : null"
+          >
+            <span class="stepper__marker">{{ index < currentStep() ? '✓' : index + 1 }}</span>
+            <span class="stepper__label">{{ item.title }}</span>
+          </li>
+        }
+      </ol>
+
+      @if (formError(); as message) {
+        <p class="alert alert--error" role="alert">{{ message }}</p>
+      }
+
+      <div class="step-title">
+        <h2>{{ step().title }}</h2>
+        <p>{{ step().description }}</p>
+      </div>
+
+      <form (submit)="register($event)" novalidate>
+        @switch (currentStep()) {
+          @case (0) {
+            <div class="form-grid">
+              <div
+                class="field col-6"
+                [class.field--invalid]="showInvalid(registrationForm.fullName())"
+              >
+                <label for="fullName" i18n>Nome completo</label>
+                <input
+                  id="fullName"
+                  autocomplete="name"
+                  placeholder="Ex.: Ana Paula Souza"
+                  [formField]="registrationForm.fullName"
+                />
+                <app-field-errors [state]="registrationForm.fullName()" />
+              </div>
+              <div
+                class="field col-6"
+                [class.field--invalid]="showInvalid(registrationForm.email())"
+              >
+                <label for="email" i18n>E-mail</label>
+                <input
+                  id="email"
+                  type="email"
+                  autocomplete="email"
+                  placeholder="voce@exemplo.com"
+                  [formField]="registrationForm.email"
+                />
+                <app-field-errors [state]="registrationForm.email()" />
+              </div>
+              <div
+                class="field col-3"
+                [class.field--invalid]="showInvalid(registrationForm.mobilePhone())"
+              >
+                <label for="mobilePhone" i18n>Celular</label>
+                <input
+                  id="mobilePhone"
+                  type="tel"
+                  inputmode="numeric"
+                  autocomplete="tel-national"
+                  placeholder="(00) 00000-0000"
+                  [formField]="registrationForm.mobilePhone"
+                  (input)="applyMobileMask()"
+                />
+                <app-field-errors [state]="registrationForm.mobilePhone()" />
+              </div>
+            </div>
+          }
+          @case (1) {
+            <div class="form-grid">
+              <div
+                class="field col-6"
+                [class.field--invalid]="showInvalid(registrationForm.userName())"
+              >
+                <label for="userName" i18n>Login</label>
+                <input
+                  id="userName"
+                  autocomplete="username"
+                  placeholder="ana.souza"
+                  [formField]="registrationForm.userName"
+                />
+                <span class="hint" i18n
+                  >De 4 a 30 caracteres: letras, números, ponto, hífen ou sublinhado.</span
+                >
+                <app-field-errors [state]="registrationForm.userName()" />
+              </div>
+              <div
+                class="field col-3"
+                [class.field--invalid]="showInvalid(registrationForm.password())"
+              >
+                <label for="password" i18n>Senha</label>
+                <input
+                  id="password"
+                  type="password"
+                  autocomplete="new-password"
+                  [formField]="registrationForm.password"
+                />
+                <div class="strength" aria-hidden="true">
+                  <span [style.width.%]="passwordStrength()"></span>
+                </div>
+                <app-field-errors [state]="registrationForm.password()" />
+              </div>
+              <div
+                class="field col-3"
+                [class.field--invalid]="showInvalid(registrationForm.passwordConfirmation())"
+              >
+                <label for="passwordConfirmation" i18n>Confirme a senha</label>
+                <input
+                  id="passwordConfirmation"
+                  type="password"
+                  autocomplete="new-password"
+                  [formField]="registrationForm.passwordConfirmation"
+                />
+                <app-field-errors [state]="registrationForm.passwordConfirmation()" />
+              </div>
+              <ul class="password-rules col-6" aria-label="Requisitos da senha" i18n-aria-label>
+                @for (rule of passwordRules(); track rule.label) {
+                  <li [class.ok]="rule.ok">{{ rule.ok ? '✓' : '•' }} {{ rule.label }}</li>
+                }
+              </ul>
+            </div>
+          }
+          @case (2) {
+            <div class="form-grid">
+              <div
+                class="field col-2"
+                [class.field--invalid]="showInvalid(registrationForm.postalCode())"
+              >
+                <label for="postalCode" i18n>CEP</label>
+                <input
+                  id="postalCode"
+                  inputmode="numeric"
+                  autocomplete="postal-code"
+                  placeholder="00000-000"
+                  [formField]="registrationForm.postalCode"
+                  (input)="lookupPostalCode()"
+                />
+                @switch (postalCodeStatus()) {
+                  @case ('loading') {
+                    <span class="status status--loading" role="status">
+                      <span class="spinner" aria-hidden="true"></span>
+                      <ng-container i18n>Consultando Correios...</ng-container>
+                    </span>
+                  }
+                  @case ('found') {
+                    <span class="status status--success" role="status" i18n
+                      >✓ Endereço encontrado</span
+                    >
+                  }
+                  @case ('not-found') {
+                    <p class="error-text" role="alert" i18n>CEP não encontrado nos Correios.</p>
+                  }
+                  @case ('error') {
+                    <p class="error-text" role="alert" i18n>
+                      Não foi possível consultar o CEP agora.
+                    </p>
+                  }
+                }
+                <app-field-errors [state]="registrationForm.postalCode()" />
+              </div>
+              <div
+                class="field col-4"
+                [class.field--invalid]="showInvalid(registrationForm.street())"
+              >
+                <label for="street" i18n>Logradouro</label>
+                <input
+                  id="street"
+                  autocomplete="address-line1"
+                  [formField]="registrationForm.street"
+                />
+                <app-field-errors [state]="registrationForm.street()" />
+              </div>
+              <div
+                class="field col-2"
+                [class.field--invalid]="showInvalid(registrationForm.number())"
+              >
+                <label for="number" i18n>Número</label>
+                <input id="number" [formField]="registrationForm.number" />
+                <app-field-errors [state]="registrationForm.number()" />
+              </div>
+              <div
+                class="field col-4"
+                [class.field--invalid]="showInvalid(registrationForm.complement())"
+              >
+                <label for="complement" i18n
+                  >Complemento <span class="hint">(opcional)</span></label
+                >
+                <input
+                  id="complement"
+                  autocomplete="address-line2"
+                  placeholder="Apto, bloco, sala..."
+                  [formField]="registrationForm.complement"
+                />
+                <app-field-errors [state]="registrationForm.complement()" />
+              </div>
+              <div
+                class="field col-6"
+                [class.field--invalid]="showInvalid(registrationForm.district())"
+              >
+                <label for="district" i18n>Bairro</label>
+                <input id="district" [formField]="registrationForm.district" />
+                <app-field-errors [state]="registrationForm.district()" />
+              </div>
+              <div
+                class="field col-2"
+                [class.field--invalid]="showInvalid(registrationForm.state())"
+              >
+                <label for="state" i18n>UF</label>
+                <select id="state" [formField]="registrationForm.state" (change)="resetCity()">
+                  <option value="" i18n>Selecione</option>
+                  @for (state of states; track state) {
+                    <option [value]="state">{{ state }}</option>
+                  }
+                </select>
+                <app-field-errors [state]="registrationForm.state()" />
+              </div>
+              <div
+                class="field col-4"
+                [class.field--invalid]="showInvalid(registrationForm.cityIbgeCode())"
+              >
+                <label for="city" i18n>Cidade</label>
+                <select id="city" [formField]="registrationForm.cityIbgeCode">
+                  <option value="" i18n>Selecione</option>
+                  @for (city of cityOptions(); track city.ibgeCode) {
+                    <!-- [selected] garante a seleção quando a lista chega depois do valor (preenchido pelo CEP). -->
+                    <option
+                      [value]="city.ibgeCode"
+                      [selected]="'' + city.ibgeCode === model().cityIbgeCode"
+                    >
+                      {{ city.name }}
+                    </option>
+                  }
+                </select>
+                @if (cities.isLoading()) {
+                  <span class="status status--loading" role="status">
+                    <span class="spinner" aria-hidden="true"></span>
+                    <ng-container i18n>Carregando cidades do IBGE...</ng-container>
+                  </span>
+                }
+                @if (cities.error()) {
+                  <p class="error-text" role="alert" i18n>Não foi possível carregar as cidades.</p>
+                }
+                <app-field-errors [state]="registrationForm.cityIbgeCode()" />
+              </div>
+            </div>
+          }
+          @default {
+            <div class="review">
+              <section class="review-section">
+                <header>
+                  <h3 i18n>Dados pessoais</h3>
+                  <button type="button" class="link-button" (click)="goToStep(0)" i18n>
+                    Editar
+                  </button>
+                </header>
+                <dl class="details">
+                  <dt i18n>Nome</dt>
+                  <dd>{{ model().fullName }}</dd>
+                  <dt i18n>E-mail</dt>
+                  <dd>{{ model().email }}</dd>
+                  <dt i18n>Celular</dt>
+                  <dd>{{ model().mobilePhone }}</dd>
+                </dl>
+                <app-field-errors [state]="registrationForm.email()" />
+              </section>
+              <section class="review-section">
+                <header>
+                  <h3 i18n>Acesso</h3>
+                  <button type="button" class="link-button" (click)="goToStep(1)" i18n>
+                    Editar
+                  </button>
+                </header>
+                <dl class="details">
+                  <dt i18n>Login</dt>
+                  <dd>{{ model().userName }}</dd>
+                  <dt i18n>Senha</dt>
+                  <dd>••••••••</dd>
+                </dl>
+              </section>
+              <section class="review-section">
+                <header>
+                  <h3 i18n>Endereço</h3>
+                  <button type="button" class="link-button" (click)="goToStep(2)" i18n>
+                    Editar
+                  </button>
+                </header>
+                <dl class="details">
+                  <dt i18n>Logradouro</dt>
+                  <dd>
+                    {{ model().street }}, {{ model().number }}
+                    @if (model().complement) {
+                      — {{ model().complement }}
+                    }
+                  </dd>
+                  <dt i18n>Bairro</dt>
+                  <dd>{{ model().district }}</dd>
+                  <dt i18n>Cidade</dt>
+                  <dd>{{ cityName() }}/{{ model().state }}</dd>
+                  <dt i18n>CEP</dt>
+                  <dd>{{ model().postalCode }}</dd>
+                </dl>
+              </section>
+            </div>
+          }
+        }
+
+        <div class="form-actions">
+          @if (currentStep() > 0) {
+            <button type="button" class="btn btn--ghost" (click)="previousStep()" i18n>
+              ← Voltar
+            </button>
+          } @else {
+            <a routerLink="/login" i18n>Já tenho conta</a>
+          }
+
+          @if (currentStep() < reviewStep) {
+            <button
+              type="button"
+              class="btn btn--primary"
+              data-testid="next"
+              (click)="nextStep()"
+              i18n
+            >
+              Continuar →
+            </button>
+          } @else {
+            <button
+              type="submit"
+              class="btn btn--primary"
+              data-testid="confirm"
+              [disabled]="registrationForm().submitting()"
+            >
+              @if (registrationForm().submitting()) {
+                <span class="spinner" aria-hidden="true"></span>
+              }
+              <ng-container i18n>Confirmar cadastro</ng-container>
+            </button>
+          }
+        </div>
+      </form>
+    </section>
+  </div>
+</div>

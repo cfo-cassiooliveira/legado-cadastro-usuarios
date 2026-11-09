@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/legado-backend/">
+    <Project Path="legado-backend/src/Legado.Api/Legado.Api.csproj" />
+    <Project Path="legado-backend/src/Legado.Application/Legado.Application.csproj" />
+    <Project Path="legado-backend/src/Legado.Domain/Legado.Domain.csproj" />
+    <Project Path="legado-backend/src/Legado.Infrastructure/Legado.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/legado-backend/tests/">
+    <Project Path="legado-backend/tests/Legado.Api.IntegrationTests/Legado.Api.IntegrationTests.csproj" />
+    <Project Path="legado-backend/tests/Legado.Application.Tests/Legado.Application.Tests.csproj" />
+    <Project Path="legado-backend/tests/Legado.Domain.Tests/Legado.Domain.Tests.csproj" />
+  </Folder>
+  <Folder Name="/legado-database/">
+    <Project Path="legado-database/src/Legado.Database/Legado.Database.csproj" />
+  </Folder>
+</Solution>

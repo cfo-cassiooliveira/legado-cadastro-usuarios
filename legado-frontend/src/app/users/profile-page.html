@@ -1,0 +1,55 @@
+<div class="page">
+  <section class="card card--wide">
+    @if (user(); as current) {
+      <header class="profile-header">
+        <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+        <div>
+          <h1>{{ current.fullName }}</h1>
+          <p>
+            &#64;{{ current.userName }} ·
+            @for (role of current.roles; track role) {
+              <span class="badge">{{ role }}</span>
+            }
+          </p>
+        </div>
+      </header>
+
+      <div class="review">
+        <section class="review-section">
+          <header><h3 i18n>Contato</h3></header>
+          <dl class="details">
+            <dt i18n>E-mail</dt>
+            <dd>{{ current.email }}</dd>
+            <dt i18n>Celular</dt>
+            <dd>{{ formatPhone(current.mobilePhone) }}</dd>
+          </dl>
+        </section>
+        <section class="review-section">
+          <header><h3 i18n>Endereço</h3></header>
+          <dl class="details">
+            <dt i18n>Logradouro</dt>
+            <dd>
+              {{ current.address.street }}, {{ current.address.number }}
+              @if (current.address.complement) {
+                — {{ current.address.complement }}
+              }
+            </dd>
+            <dt i18n>Bairro</dt>
+            <dd>{{ current.address.district }}</dd>
+            <dt i18n>Cidade</dt>
+            <dd>{{ current.address.city }}/{{ current.address.state }}</dd>
+            <dt i18n>CEP</dt>
+            <dd>{{ formatPostalCode(current.address.postalCode) }}</dd>
+          </dl>
+        </section>
+        <section class="review-section">
+          <header><h3 i18n>Conta</h3></header>
+          <dl class="details">
+            <dt i18n>Cadastrado em</dt>
+            <dd>{{ current.createdAt | date: 'short' }}</dd>
+          </dl>
+        </section>
+      </div>
+    }
+  </section>
+</div>

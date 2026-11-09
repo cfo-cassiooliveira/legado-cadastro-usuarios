@@ -1,0 +1,19 @@
+# .NET
+bin/
+obj/
+*.user
+TestResults/
+coverage*/
+# Angular / Node
+node_modules/
+dist/
+.angular/
+# Segredos locais (Art. IV.4)
+.env
+# IDE
+.vs/
+.idea/
+
+# Relatórios de cobertura
+legado-frontend/coverage/
+*.coverage.xml

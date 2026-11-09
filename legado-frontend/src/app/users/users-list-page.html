@@ -1,0 +1,78 @@
+<div class="page">
+  <section class="card card--wide">
+    <header class="card-header">
+      <h1 i18n>Usuários cadastrados</h1>
+      <p i18n>Base legada que será migrada para o Keycloak.</p>
+    </header>
+
+    @if (users.error()) {
+      <p class="alert alert--error" role="alert" i18n>Não foi possível carregar os usuários.</p>
+    } @else if (users.hasValue()) {
+      @if (users.value().items.length === 0) {
+        <p class="empty-state" i18n>Nenhum usuário cadastrado.</p>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th i18n>Usuário</th>
+                <th i18n>E-mail</th>
+                <th i18n>Cadastro</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of users.value().items; track user.id) {
+                <tr>
+                  <td>
+                    <span class="user-cell">
+                      <span class="avatar avatar--small" aria-hidden="true">{{
+                        initialsOf(user.fullName)
+                      }}</span>
+                      <span>
+                        <strong>{{ user.fullName }}</strong>
+                        <br />
+                        <span class="hint">&#64;{{ user.userName }}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td>{{ user.email }}</td>
+                  <td>{{ user.createdAt | date: 'shortDate' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+      <div class="pagination">
+        <span i18n
+          >Página {{ page() }} de {{ totalPages() }} · {{ users.value().totalCount }} usuários</span
+        >
+        <div>
+          <button
+            type="button"
+            class="btn btn--ghost btn--small"
+            [disabled]="page() === 1"
+            (click)="previousPage()"
+            i18n
+          >
+            ← Anterior
+          </button>
+          <button
+            type="button"
+            class="btn btn--ghost btn--small"
+            [disabled]="page() >= totalPages()"
+            (click)="nextPage()"
+            i18n
+          >
+            Próxima →
+          </button>
+        </div>
+      </div>
+    } @else {
+      <p class="empty-state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <ng-container i18n>Carregando...</ng-container>
+      </p>
+    }
+  </section>
+</div>

@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.angular/
+**/TestResults/
+.git/
+.env
+legado-backend/tests/

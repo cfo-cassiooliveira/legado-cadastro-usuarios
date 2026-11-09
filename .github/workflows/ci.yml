@@ -1,0 +1,112 @@
+# Pipeline de CI do legado: build com warnings como erro, testes, lint, scan de dependências,
+# SonarQube com Quality Gate (Art. V.2/V.3) e build das imagens.
+# Segredos necessários no repositório (Settings > Secrets and variables > Actions), nunca no código:
+#   SONAR_TOKEN     token de análise do SonarQube
+#   SONAR_HOST_URL  URL do SonarQube Server do time
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore Legado.slnx
+      - run: dotnet build Legado.slnx -warnaserror --no-restore
+      - run: dotnet format Legado.slnx --verify-no-changes --no-restore
+      # Testes de integração usam Testcontainers (Docker disponível no runner ubuntu).
+      - run: dotnet test --solution Legado.slnx --no-build
+      - run: dotnet list Legado.slnx package --vulnerable --include-transitive
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: legado-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: legado-frontend/package-lock.json
+      - run: npm ci
+      - run: npx ng lint
+      - run: npx prettier --check "src/**/*.{ts,html,scss}"
+      - run: npx ng test --watch=false
+      - run: npx ng build
+      - run: npm audit --omit=dev
+
+  quality-gate:
+    # Análise SonarQube do backend e do frontend; o job falha se o Quality Gate reprovar.
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # histórico completo para o "código novo" do Sonar
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: legado-frontend/package-lock.json
+      - name: Cobertura do frontend (lcov, todos os arquivos)
+        working-directory: legado-frontend
+        run: |
+          npm ci
+          npx ng test --watch=false --coverage --coverage-reporters lcov \
+            --coverage-include "src/app/**/*.ts" --coverage-exclude "src/app/**/*.spec.ts"
+      - run: dotnet tool restore
+      - name: SonarQube begin
+        run: >
+          dotnet sonarscanner begin
+          /k:"legado-cadastro-usuarios"
+          /d:sonar.host.url="$SONAR_HOST_URL"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.coverage.xml"
+          /d:sonar.javascript.lcov.reportPaths="legado-frontend/coverage/legado-frontend/lcov.info"
+          /d:sonar.exclusions="**/Migrations/**,**/node_modules/**,**/dist/**,**/*.spec.ts"
+          /d:sonar.coverage.exclusions="**/Program.cs,**/Migrations/**,**/DesignTimeDbContextFactory.cs,legado-frontend/src/main.ts,legado-frontend/src/app/app.config.ts,legado-frontend/src/app/app.routes.ts"
+          /d:sonar.qualitygate.wait=true
+      - run: dotnet build Legado.slnx --configuration Release
+      - name: Testes .NET com cobertura (um relatório por projeto)
+        run: |
+          for project in legado-backend/tests/*/; do
+            name=$(basename "$project")
+            dotnet test --project "$project" --no-build --configuration Release \
+              --coverage --coverage-output-format xml --coverage-output "$name.coverage.xml" \
+              --results-directory "$PWD/TestResults"
+          done
+      - name: SonarQube end (falha se o Quality Gate reprovar)
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+  images:
+    runs-on: ubuntu-latest
+    needs: [quality-gate]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build das imagens (com .env descartável apenas para validar o compose)
+        run: |
+          cp .env.example .env
+          sed -i 's/^MSSQL_SA_PASSWORD=$/MSSQL_SA_PASSWORD=ci-only-not-a-secret/; s/^APP_DB_PASSWORD=$/APP_DB_PASSWORD=ci-only-not-a-secret/; s/^JWT_SIGNING_KEY=$/JWT_SIGNING_KEY=ci-only-placeholder-key-not-used-at-runtime/' .env
+          docker compose build

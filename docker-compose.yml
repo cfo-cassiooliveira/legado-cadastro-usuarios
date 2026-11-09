@@ -1,0 +1,66 @@
+# Ambiente completo do sistema legado: banco -> migrator -> api -> web.
+# Uso: cp .env.example .env (preencha) && docker compose up -d --build
+name: legado
+
+services:
+  sqlserver:
+    # SQL Server 2025 (17.0.5035.5) fixado por digest (OWASP A03); atualize junto com o legado-database/Dockerfile.
+    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:245f6b1c8903edae52cb20fa31419cefcde1a49938bb8c3447099011fc871ca3
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?defina MSSQL_SA_PASSWORD no .env}
+    ports:
+      # Publicado só em localhost, para inspeção com SSMS/Azure Data Studio e para a futura migração.
+      - "127.0.0.1:1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "SQLCMDPASSWORD=\"$$MSSQL_SA_PASSWORD\" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q 'SELECT 1' -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  migrator:
+    build:
+      context: .
+      dockerfile: legado-database/Dockerfile
+    environment:
+      DB_HOST: sqlserver
+      DB_NAME: LegadoUsers
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      APP_DB_USER: legacy_app
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no .env}
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: legado-backend/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${API_ENVIRONMENT:-Production}
+      ConnectionStrings__LegadoDb: "Server=sqlserver,1433;Database=LegadoUsers;User Id=legacy_app;Password=${APP_DB_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?defina JWT_SIGNING_KEY no .env}
+      Seed__Enabled: ${SEED_ENABLED:-false}
+      Seed__DefaultPassword: ${SEED_DEFAULT_PASSWORD:-}
+    # Sem "ports": a API só é acessível pela rede interna, via nginx do frontend.
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    build:
+      context: legado-frontend
+    ports:
+      - "4200:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:

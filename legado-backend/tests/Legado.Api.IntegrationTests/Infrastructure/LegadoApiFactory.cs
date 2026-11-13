@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using Legado.Api.Health;
 using Legado.Application.Addresses;
 using Legado.Infrastructure.Persistence;
@@ -17,11 +18,15 @@ namespace Legado.Api.IntegrationTests.Infrastructure;
 /// <summary>Sobe a API contra um SQL Server real (Testcontainers) com as migrations do legado-database.</summary>
 public sealed class LegadoApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    // Chave fictícia apenas para testes (não é segredo de nenhum ambiente).
-    private const string TestSigningKey = "integration-tests-signing-key-0123456789abcdef";
+    // Chave gerada a cada execução: nenhum segredo (nem de teste) fica versionado (Constituição Art. IV.4).
+    private static readonly string TestSigningKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
     private const string HighRateLimit = "10000";
 
-    private readonly MsSqlContainer _database = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2025-latest").Build();
+    // Mesma imagem (tag + digest) do docker-compose.yml e do migrator: testes reprodutíveis.
+    private const string SqlServerImage =
+        "mcr.microsoft.com/mssql/server:2025-latest@sha256:05644dad1266ca3d445d1e8f6d2ebb9a6a03df9a39376e0f7b48917356dca9d9";
+
+    private readonly MsSqlContainer _database = new MsSqlBuilder(SqlServerImage).Build();
 
     public FakePostalCodeLookup PostalCodes { get; } = new();
 

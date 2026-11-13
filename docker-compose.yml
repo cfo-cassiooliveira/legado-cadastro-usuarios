@@ -5,7 +5,7 @@ name: legado
 services:
   sqlserver:
     # SQL Server 2025 (17.0.5035.5) fixado por digest (OWASP A03); atualize junto com o legado-database/Dockerfile.
-    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:245f6b1c8903edae52cb20fa31419cefcde1a49938bb8c3447099011fc871ca3
+    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:05644dad1266ca3d445d1e8f6d2ebb9a6a03df9a39376e0f7b48917356dca9d9
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
@@ -56,8 +56,9 @@ services:
   web:
     build:
       context: legado-frontend
+    # Só na máquina local: a aplicação guarda dados pessoais e não deve ficar exposta na rede.
     ports:
-      - "4200:8080"
+      - "127.0.0.1:4200:8080"
     depends_on:
       - api
     restart: unless-stopped

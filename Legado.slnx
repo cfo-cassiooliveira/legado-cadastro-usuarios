@@ -8,6 +8,7 @@
   <Folder Name="/legado-backend/tests/">
     <Project Path="legado-backend/tests/Legado.Api.IntegrationTests/Legado.Api.IntegrationTests.csproj" />
     <Project Path="legado-backend/tests/Legado.Application.Tests/Legado.Application.Tests.csproj" />
+    <Project Path="legado-backend/tests/Legado.ArchitectureTests/Legado.ArchitectureTests.csproj" />
     <Project Path="legado-backend/tests/Legado.Domain.Tests/Legado.Domain.Tests.csproj" />
   </Folder>
   <Folder Name="/legado-database/">

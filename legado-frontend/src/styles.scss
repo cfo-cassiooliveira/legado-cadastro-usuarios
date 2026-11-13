@@ -1,28 +1,9 @@
 /* Design system do frontend legado: tokens, layout de autenticação, formulários, stepper e tabelas. */
+@use './styles/tokens';
+
 :root {
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: #eef2ff;
-  --accent: #7c3aed;
-  --surface: #ffffff;
-  --background: #f5f7fb;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --text: #0f172a;
-  --text-muted: #64748b;
-  --danger: #dc2626;
-  --danger-soft: #fef2f2;
-  --success: #16a34a;
-  --success-soft: #f0fdf4;
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 20px;
-  --shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 8px 24px rgb(15 23 42 / 8%);
-  --shadow-lg: 0 24px 48px rgb(15 23 42 / 14%);
-  --gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #db2777 100%);
-  --transition: 150ms ease;
   font-family:
-    'Inter',
+    Inter,
     system-ui,
     -apple-system,
     'Segoe UI',
@@ -71,7 +52,7 @@ a {
 
 .auth-hero {
   background: var(--gradient);
-  color: #fff;
+  color: var(--text-on-accent);
   padding: 3rem 2.5rem;
   display: flex;
   flex-direction: column;
@@ -91,15 +72,19 @@ a {
     right: -120px;
   }
 
-  h1 {
-    font-size: 2rem;
-    line-height: 1.15;
-  }
-
   p {
     margin: 0;
     opacity: 0.9;
     line-height: 1.6;
+  }
+
+  /* Destaque visual do painel (não é título da página: o h1 é o do formulário). */
+  .auth-hero__headline {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    opacity: 1;
   }
 
   ul {
@@ -114,7 +99,7 @@ a {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    font-size: 0.95rem;
+    font-size: 1rem;
 
     &::before {
       content: '✓';
@@ -137,7 +122,7 @@ a {
   padding: 3rem 1.5rem;
 }
 
-@media (max-width: 860px) {
+@media (width <= 860px) {
   .auth-layout {
     grid-template-columns: 1fr;
   }
@@ -209,7 +194,7 @@ a {
   grid-column: span 2;
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .col-4,
   .col-3,
   .col-2 {
@@ -229,13 +214,15 @@ a {
   label {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #334155;
+    color: var(--text-label);
   }
 
   input,
   select {
     font: inherit;
-    font-size: 0.95rem;
+
+    /* 16px: abaixo disso o iOS dá zoom ao focar o campo. */
+    font-size: 1rem;
     height: 46px;
     padding: 0 0.9rem;
     border: 1.5px solid var(--border-strong);
@@ -247,11 +234,11 @@ a {
       box-shadow var(--transition);
 
     &::placeholder {
-      color: #94a3b8;
+      color: var(--text-muted);
     }
 
     &:hover {
-      border-color: #94a3b8;
+      border-color: var(--border-hover);
     }
 
     &:focus {
@@ -262,7 +249,7 @@ a {
 
     &:disabled,
     &:read-only {
-      background: #f8fafc;
+      background: var(--surface-muted);
     }
   }
 
@@ -356,7 +343,7 @@ a {
 
   &--primary {
     background: var(--primary);
-    color: #fff;
+    color: var(--text-on-accent);
     box-shadow: 0 6px 16px rgb(79 70 229 / 30%);
 
     &:hover:not(:disabled) {
@@ -371,14 +358,21 @@ a {
     border-color: var(--border-strong);
 
     &:hover:not(:disabled) {
-      background: #f1f5f9;
+      background: var(--surface-hover);
     }
   }
 
   &--block {
     width: 100%;
   }
+}
 
+/* Botão de envio no fim de um formulário de uma coluna: separa-o dos campos. */
+.form-submit {
+  margin-top: 1.75rem;
+}
+
+.btn {
   &--small {
     height: 36px;
     padding: 0 0.9rem;
@@ -419,17 +413,25 @@ a {
   margin: 0 0 1.25rem;
   font-size: 0.9rem;
   border: 1px solid transparent;
+  flex-wrap: wrap;
+
+  /* Alerta com ação de recuperação: a mensagem ocupa o espaço e o botão vai para o fim (ou para baixo, se faltar). */
+  > p {
+    flex: 1 1 12rem;
+    margin: 0;
+    align-self: center;
+  }
 
   &--error {
     background: var(--danger-soft);
-    border-color: #fecaca;
-    color: #991b1b;
+    border-color: var(--danger-border);
+    color: var(--danger-text);
   }
 
   &--success {
     background: var(--success-soft);
-    border-color: #bbf7d0;
-    color: #166534;
+    border-color: var(--success-border);
+    color: var(--success-text);
   }
 }
 
@@ -496,7 +498,7 @@ a {
   .stepper__item--done & {
     background: var(--primary);
     border-color: var(--primary);
-    color: #fff;
+    color: var(--text-on-accent);
   }
 }
 
@@ -505,7 +507,7 @@ a {
   color: var(--text);
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .stepper__label {
     display: none;
   }
@@ -540,7 +542,7 @@ a {
     font-weight: 500;
     padding: 0.25rem 0.6rem;
     border-radius: 999px;
-    background: #f1f5f9;
+    background: var(--surface-hover);
     color: var(--text-muted);
     transition: all var(--transition);
   }
@@ -554,7 +556,7 @@ a {
 .strength {
   height: 6px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--border);
   overflow: hidden;
 
   span {
@@ -604,7 +606,7 @@ a {
   dd {
     margin: 0;
     font-weight: 500;
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -648,7 +650,7 @@ a {
   height: 64px;
   border-radius: 50%;
   background: var(--gradient);
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 1.4rem;
   font-weight: 700;
   flex-shrink: 0;
@@ -694,7 +696,7 @@ table {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--text-muted);
-    background: #f8fafc;
+    background: var(--surface-muted);
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--border);
   }
@@ -709,7 +711,7 @@ table {
   }
 
   tbody tr:hover {
-    background: #f8fafc;
+    background: var(--surface-muted);
   }
 }
 
@@ -741,7 +743,7 @@ table {
 
 /* ---------- Ajustes responsivos (celular) ---------- */
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .auth-content {
     padding: 1.25rem 0.75rem 2rem;
   }

@@ -1,0 +1,39 @@
+/* Design tokens do frontend legado: única fonte de cores, raios, sombras e transições (Stylelint barra hex fora daqui). */
+:root {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-soft: #eef2ff;
+  --accent: #7c3aed;
+  --surface: #fff;
+  --surface-muted: #f8fafc;
+  --surface-hover: #f1f5f9;
+  --background: #f5f7fb;
+  --border: #e2e8f0;
+
+  /* Limite de campos e controles: >= 3:1 contra a superfície (WCAG 1.4.11). */
+  --border-strong: #7b879c;
+  --border-hover: #56657a;
+  --text: #0f172a;
+  --text-label: #334155;
+
+  /* >= 4,5:1 sobre o fundo e sobre o realce primário (o tom anterior tinha 4,44:1). */
+  --text-muted: #5b6b81;
+
+  /* Texto sobre o gradiente e os botões primários. */
+  --text-on-accent: #fff;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --danger-border: #fecaca;
+  --danger-text: #991b1b;
+  --success: #16a34a;
+  --success-soft: #f0fdf4;
+  --success-border: #bbf7d0;
+  --success-text: #166534;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 8px 24px rgb(15 23 42 / 8%);
+  --shadow-lg: 0 24px 48px rgb(15 23 42 / 14%);
+  --gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #db2777 100%);
+  --transition: 150ms ease;
+}

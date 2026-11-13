@@ -40,7 +40,7 @@
   height: 36px;
   border-radius: 10px;
   background: var(--gradient);
-  color: #fff;
+  color: var(--text-on-accent);
   font-weight: 800;
 }
 
@@ -56,7 +56,7 @@ nav {
     font-size: 0.9rem;
 
     &:hover {
-      background: #f1f5f9;
+      background: var(--surface-hover);
       color: var(--text);
       text-decoration: none;
     }
@@ -77,14 +77,14 @@ nav {
   font-weight: 600;
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .brand small,
   .user-chip span {
     display: none;
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .topbar {
     padding: 0 0.75rem;
   }

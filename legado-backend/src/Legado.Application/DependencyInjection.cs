@@ -1,6 +1,7 @@
 using Legado.Application.Addresses;
 using Legado.Application.Auth;
 using Legado.Application.Users;
+using Legado.Application.Users.Migration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Legado.Application;
@@ -18,6 +19,10 @@ public static class DependencyInjection
         services.AddScoped<ISessionValidator, SessionValidator>();
         services.AddScoped<ILookupPostalCodeHandler, LookupPostalCodeHandler>();
         services.AddScoped<IListCitiesHandler, ListCitiesHandler>();
+        services.AddScoped<IVerifyLegacyCredentialsHandler, VerifyLegacyCredentialsHandler>();
+        services.AddScoped<IGetLegacyUserByLoginHandler, GetLegacyUserByLoginHandler>();
+        services.AddScoped<IGetLegacyUserExistenceHandler, GetLegacyUserExistenceHandler>();
+        services.AddScoped<IMarkUserMigratedHandler, MarkUserMigratedHandler>();
         return services;
     }
 }

@@ -11,6 +11,9 @@ internal sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Ap
     private const int PhoneMaxLength = 20;
     private const int StateLength = 2;
 
+    /// <summary>Índice único (filtrado) do id do usuário no Keycloak.</summary>
+    public const string KeycloakUserIdIndex = "KeycloakUserIdIndex";
+
     /// <summary>Aplica o mapeamento da entidade <see cref="ApplicationUser"/>.</summary>
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
@@ -24,6 +27,12 @@ internal sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Ap
             .HasDatabaseName("EmailIndex")
             .IsUnique()
             .HasFilter("[NormalizedEmail] IS NOT NULL");
+
+        // Uma conta do Keycloak corresponde a no máximo uma conta do Legado (expand: colunas anuláveis).
+        builder.HasIndex(u => u.KeycloakUserId)
+            .HasDatabaseName(KeycloakUserIdIndex)
+            .IsUnique()
+            .HasFilter("[KeycloakUserId] IS NOT NULL");
 
         builder.ComplexProperty(u => u.Address, address =>
         {

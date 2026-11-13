@@ -6,4 +6,5 @@
 **/TestResults/
 .git/
 .env
+secrets/
 legado-backend/tests/

@@ -1,6 +1,7 @@
 using Legado.Application.Addresses;
 using Legado.Application.Auth;
 using Legado.Application.Users;
+using Legado.Application.Users.Migration;
 using Legado.Infrastructure.Addresses;
 using Legado.Infrastructure.Auth;
 using Legado.Infrastructure.Persistence;
@@ -75,6 +76,8 @@ public static class DependencyInjection
         services.AddScoped<IUserReadService, UserReadService>();
         services.AddScoped<ICredentialVerifier, CredentialVerifier>();
         services.AddScoped<IUserSessionStore, UserSessionStore>();
+        services.AddScoped<IUserMigrationWriter, UserMigrationWriter>();
+        services.AddScoped<ILegacyUserReadService, LegacyUserReadService>();
     }
 
     private static void AddAddressServices(this IServiceCollection services, IConfiguration configuration)

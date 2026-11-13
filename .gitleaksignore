@@ -1,0 +1,4 @@
+# Falsos positivos do gitleaks (security.md). Cada entrada com o motivo.
+# Commit inicial: chave fictícia dos testes de integração (nunca usada em ambiente algum). Desde 2026-11-13 a chave é
+# gerada a cada execução (LegadoApiFactory), mas a versão antiga continua no histórico.
+444f958da304222399e51fbc72822bc3cf70ce28:legado-backend/tests/Legado.Api.IntegrationTests/Infrastructure/LegadoApiFactory.cs:generic-api-key:20

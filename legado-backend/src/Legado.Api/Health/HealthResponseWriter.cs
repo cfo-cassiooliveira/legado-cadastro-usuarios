@@ -31,6 +31,7 @@ internal static class HealthResponseWriter
         };
 
         context.Response.ContentType = "application/json";
-        return context.Response.WriteAsync(JsonSerializer.Serialize(payload, JsonOptions));
+        // Cliente que desistiu da requisição (timeout do orquestrador, conexão fechada): não há para quem escrever.
+        return context.Response.WriteAsync(JsonSerializer.Serialize(payload, JsonOptions), context.RequestAborted);
     }
 }

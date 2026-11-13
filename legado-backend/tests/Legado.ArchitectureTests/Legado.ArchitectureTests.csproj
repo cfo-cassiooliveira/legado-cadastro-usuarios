@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="TngTech.ArchUnitNET.xUnitV3" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Todas as camadas: as regras verificam as dependências entre elas (Constituição Art. III). -->
+    <ProjectReference Include="..\..\src\Legado.Domain\Legado.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Legado.Application\Legado.Application.csproj" />
+    <ProjectReference Include="..\..\src\Legado.Infrastructure\Legado.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Legado.Api\Legado.Api.csproj" />
+  </ItemGroup>
+</Project>

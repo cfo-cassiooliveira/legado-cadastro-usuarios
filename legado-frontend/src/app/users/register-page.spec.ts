@@ -117,6 +117,14 @@ describe('RegisterPage (wizard)', () => {
     await settle();
   }
 
+  // Regressão: o painel lateral também tinha um h1, e a tela ficava com dois títulos principais.
+  it('tem um único h1, o do formulário', () => {
+    const headings = element.querySelectorAll('h1');
+
+    expect(headings.length).toBe(1);
+    expect(headings[0].textContent?.trim()).toBe('Cadastro de usuário');
+  });
+
   it('começa no passo de dados pessoais', () => {
     expect(currentStepTitle()).toBe('Dados pessoais');
     expect(element.querySelector('[aria-current="step"]')?.textContent).toContain('1');

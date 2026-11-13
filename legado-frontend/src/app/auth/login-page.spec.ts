@@ -41,6 +41,18 @@ describe('LoginPage', () => {
     await fixture.whenStable();
   }
 
+  // Regressão: o painel lateral também tinha um h1, e a tela ficava com dois títulos principais.
+  it('tem um único h1, o do formulário', () => {
+    const headings = element.querySelectorAll('h1');
+
+    expect(headings.length).toBe(1);
+    expect(headings[0].textContent?.trim()).toBe('Entrar');
+  });
+
+  it('não usa estilo inline no botão de envio (CSP sem unsafe-inline)', () => {
+    expect(element.querySelector('button[type="submit"]')?.getAttribute('style')).toBeNull();
+  });
+
   it('não chama a API com campos vazios e exibe os erros', async () => {
     element.querySelector('form')?.dispatchEvent(new Event('submit'));
     await fixture.whenStable();

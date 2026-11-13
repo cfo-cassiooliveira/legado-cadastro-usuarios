@@ -41,7 +41,7 @@ MSYS_NO_PATHCONV=1 dotnet sonarscanner begin \
   /d:sonar.token="${SONAR_TOKEN}" \
   /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.coverage.xml" \
   /d:sonar.javascript.lcov.reportPaths="legado-frontend/coverage/legado-frontend/lcov.info" \
-  /d:sonar.exclusions="**/Migrations/**,**/node_modules/**,**/dist/**,**/*.spec.ts,**/*.testing.ts" \
+  /d:sonar.exclusions="**/Migrations/**,**/node_modules/**,**/dist/**,**/*.spec.ts,**/*.testing.ts,e2e/**" \
   /d:sonar.coverage.exclusions="**/Program.cs,**/Migrations/**,**/DesignTimeDbContextFactory.cs,legado-frontend/src/main.ts,legado-frontend/src/app/app.config.ts,legado-frontend/src/app/app.routes.ts" \
   /d:sonar.qualitygate.wait=true
 

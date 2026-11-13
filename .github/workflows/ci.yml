@@ -9,13 +9,37 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [master, 'DEV-*']
   pull_request:
 
 permissions:
   contents: read
 
+env:
+  GITLEAKS_IMAGE: zricethezav/gitleaks:v8.28.0@sha256:cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854
+  TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+
 jobs:
+  secrets:
+    name: gitleaks (segredos em todo o histórico)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Falsos positivos ficam no .gitleaksignore (fingerprint + motivo).
+      - run: docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE" git /repo --no-banner --redact --exit-code 1
+
+  trivy-fs:
+    name: Trivy (dependências NuGet/npm e misconfig de Dockerfile/compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: >-
+          docker run --rm -v "$PWD:/src" "$TRIVY_IMAGE" fs --scanners vuln,misconfig
+          --severity HIGH,CRITICAL --ignore-unfixed --skip-version-check --ignorefile /src/.trivyignore.yaml
+          --exit-code 1 /src
+
   backend:
     runs-on: ubuntu-latest
     steps:
@@ -44,6 +68,7 @@ jobs:
           cache-dependency-path: legado-frontend/package-lock.json
       - run: npm ci
       - run: npx ng lint
+      - run: npm run lint:styles
       - run: npx prettier --check "src/**/*.{ts,html,scss}"
       - run: npx ng test --watch=false
       - run: npx ng build
@@ -109,8 +134,22 @@ jobs:
       (needs.quality-gate.result == 'success' || needs.quality-gate.result == 'skipped')
     steps:
       - uses: actions/checkout@v4
-      - name: Build das imagens (com .env descartável apenas para validar o compose)
+      # Segredos aleatórios gerados no próprio runner (nunca versionados nem impressos); sem massa de demonstração.
+      - name: .env descartável
         run: |
           cp .env.example .env
-          sed -i 's/^MSSQL_SA_PASSWORD=$/MSSQL_SA_PASSWORD=ci-only-not-a-secret/; s/^APP_DB_PASSWORD=$/APP_DB_PASSWORD=ci-only-not-a-secret/; s/^JWT_SIGNING_KEY=$/JWT_SIGNING_KEY=ci-only-placeholder-key-not-used-at-runtime/' .env
-          docker compose build
+          sed -i "s/^MSSQL_SA_PASSWORD=\$/MSSQL_SA_PASSWORD=Sa$(openssl rand -hex 12)#1/; s/^APP_DB_PASSWORD=\$/APP_DB_PASSWORD=App$(openssl rand -hex 12)#1/; s/^JWT_SIGNING_KEY=\$/JWT_SIGNING_KEY=$(openssl rand -hex 48)/; s/^SEED_ENABLED=true\$/SEED_ENABLED=false/" .env
+      - name: Build e subida da stack (banco -> migrator -> api -> web)
+        run: docker compose up -d --build --wait
+      - name: Trivy nas imagens (HIGH/CRITICAL com correção; exceções com prazo no .trivyignore.yaml)
+        run: |
+          for image in legado-api legado-web legado-migrator; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/src" "$TRIVY_IMAGE" image \
+              --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --skip-version-check \
+              --ignorefile /src/.trivyignore.yaml --exit-code 1 "$image"
+          done
+      # Playwright + axe-core em desktop, tablet e celular (frontend.md).
+      - run: ./scripts/e2e.sh
+      - name: Logs em caso de falha
+        if: failure()
+        run: docker compose logs --no-color migrator api web | tail -200

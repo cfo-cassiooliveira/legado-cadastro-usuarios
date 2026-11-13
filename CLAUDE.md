@@ -30,7 +30,8 @@
 ```
 legado-database/   Migrations EF (Legado.Database), migrator (EF bundle + sqlcmd), scripts SQL
 legado-backend/    API .NET 10 (Domain, Application, Infrastructure, Api) + tests/
-legado-frontend/   Angular 22 (standalone, signals, zoneless, Signal Forms, Vitest) + nginx
+legado-frontend/   Angular 22 (standalone, signals, zoneless, Signal Forms, Vitest, Stylelint) + nginx
+e2e/               Playwright + axe-core (desktop, tablet, celular) contra o docker compose (scripts/e2e.sh)
 docs/adr/          ADR-0001 (auth legada), ADR-0002 (ViaCEP/IBGE)
 docker-compose.yml sqlserver -> migrator -> api -> web
 ```
@@ -64,7 +65,8 @@ dotnet build Legado.slnx -warnaserror
 dotnet test --solution Legado.slnx                         # integração exige Docker (Testcontainers)
 dotnet tool restore && dotnet ef migrations add <Nome> \
   --project legado-database/src/Legado.Database --startup-project legado-database/src/Legado.Database
-cd legado-frontend && npm ci && npx ng test --watch=false && npx ng lint && npx ng build
+cd legado-frontend && npm ci && npx ng test --watch=false && npx ng lint && npm run lint:styles && npx ng build
+./scripts/e2e.sh                                           # E2E com a stack de pé (Playwright em container)
 ./scripts/sonar-analysis.sh                                # SonarQube local (../sonarqube) + Quality Gate (ADR-0004)
 cp .env.example .env && docker compose up -d --build       # http://localhost:4200
 ```

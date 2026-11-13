@@ -98,4 +98,24 @@ describe('UsersListPage', () => {
       expect.anything(),
     );
   });
+
+  // Regressão: o erro não oferecia ação de recuperação (frontend.md §6); só recarregando a página.
+  it('tenta carregar de novo pelo botão do estado de erro', async () => {
+    await respond('/api/v1/users?page=1&pageSize=10', {}, 500);
+    const retry = Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+      button.textContent?.includes('Tentar de novo'),
+    );
+    expect(retry).toBeDefined();
+
+    retry!.click(); // Afirmado logo acima.
+    await settle();
+    await respond('/api/v1/users?page=1&pageSize=10', {
+      items: [],
+      page: 1,
+      pageSize: 10,
+      totalCount: 0,
+    });
+
+    expect(element.textContent).toContain('Nenhum usuário cadastrado.');
+  });
 });

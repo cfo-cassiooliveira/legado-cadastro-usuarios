@@ -6,7 +6,12 @@
     </header>
 
     @if (users.error()) {
-      <p class="alert alert--error" role="alert" i18n>Não foi possível carregar os usuários.</p>
+      <div class="alert alert--error" role="alert">
+        <p i18n>Não foi possível carregar os usuários.</p>
+        <button type="button" class="btn btn--ghost btn--small" (click)="retry()" i18n>
+          Tentar de novo
+        </button>
+      </div>
     } @else if (users.hasValue()) {
       @if (users.value().items.length === 0) {
         <p class="empty-state" i18n>Nenhum usuário cadastrado.</p>

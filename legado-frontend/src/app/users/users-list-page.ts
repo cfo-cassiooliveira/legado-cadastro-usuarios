@@ -46,6 +46,11 @@ export class UsersListPage {
     });
   }
 
+  /** Recarrega a página atual depois de uma falha (ação de recuperação do estado de erro). */
+  protected retry(): void {
+    this.users.reload();
+  }
+
   protected previousPage(): void {
     this.page.update((current) => Math.max(current - 1, 1));
   }

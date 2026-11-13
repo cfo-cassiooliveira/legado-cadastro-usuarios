@@ -1,0 +1,14 @@
+# Exceções da varredura de vulnerabilidades (Trivy). Cada entrada tem justificativa e prazo: ao expirar, o CI volta
+# a falhar e a decisão precisa ser revista (security.md).
+vulnerabilities:
+  - id: CVE-2026-111943
+    paths:
+      - "opt/mssql-extensibility/bin/launchpad"
+      - "opt/mssql/bin/launchpadd"
+      - "opt/mssql/bin/setnetbr"
+    statement: >-
+      Binários Go internos da imagem oficial do SQL Server 2025 (stdlib 1.27.2; corrigido no Go 1.27.3). A imagem mais
+      nova publicada em 2026-11-13 (digest 05644dad...) ainda traz esses binários; não alteramos binários da imagem
+      oficial. Risco baixo: launchpad/extensibilidade não é usado pelo legado e a porta do banco só existe em
+      127.0.0.1 e na rede interna do compose. Rever no próximo digest do mssql/server:2025-latest.
+    expired_at: 2026-12-13

@@ -67,5 +67,3 @@ await using (var scope = app.Services.CreateAsyncScope())
 
 await app.RunAsync();
 
-/// <summary>Exposto para os testes de integração (WebApplicationFactory).</summary>
-public partial class Program;

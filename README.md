@@ -160,8 +160,9 @@ docker compose exec web wget -qO- http://api:8080/health
 
 ```bash
 dotnet build Legado.slnx -warnaserror
-dotnet test --solution Legado.slnx            # integração sobe SQL Server real via Testcontainers
-cd legado-frontend && npm ci && npx ng test --watch=false && npx ng lint
+dotnet test --solution Legado.slnx            # unitários, arquitetura (ArchUnitNET) e integração (Testcontainers)
+cd legado-frontend && npm ci && npx ng test --watch=false && npx ng lint && npm run lint:styles
+./scripts/e2e.sh                              # stack de pé: Playwright + axe em desktop, tablet e celular
 ```
 
 ### Qualidade (SonarQube)

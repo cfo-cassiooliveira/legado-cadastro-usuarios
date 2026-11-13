@@ -1,11 +1,14 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Painel de apresentação exibido ao lado dos formulários de login e cadastro. */
+/**
+ * Painel de apresentação exibido ao lado dos formulários de login e cadastro.
+ * O destaque é um parágrafo, não um título: o único h1 da página é o do formulário (o assunto da tela).
+ */
 @Component({
   selector: 'app-auth-hero',
   template: `
     <aside class="auth-hero">
-      <h1>{{ headline() }}</h1>
+      <p class="auth-hero__headline">{{ headline() }}</p>
       <p>{{ description() }}</p>
       <ul>
         <li i18n>Endereço validado na base de CEPs dos Correios</li>

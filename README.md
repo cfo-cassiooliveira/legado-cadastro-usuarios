@@ -50,6 +50,7 @@ o modelo [`.env.example`](.env.example), sem valores, com instruções para gera
 | `SEED_ENABLED` | Não (padrão `false`) | Cria `admin` + 10 usuários fictícios na primeira subida | `true` ou `false` |
 | `SEED_DEFAULT_PASSWORD` | Se `SEED_ENABLED=true` | Senha de todos os usuários de demonstração | 8+ caracteres com maiúscula, minúscula, número e símbolo |
 | `API_ENVIRONMENT` | Não (padrão `Production`) | Ambiente ASP.NET Core da API | `Production` ou `Development` (publica o OpenAPI na rede interna) |
+| `LEGADO_INTERNAL_KEYCLOAK_KEY` / `LEGADO_INTERNAL_CADASTRO_KEY` | Só com `docker-compose.identity.yml` | Chaves HMAC da API interna de migração, uma por chamador | Base64 de 32 bytes, geradas por `./scripts/internal-credentials.sh` |
 
 Se uma variável obrigatória faltar, o `docker compose` para com a mensagem `defina <VARIÁVEL> no .env`.
 A API também não sobe sem uma `JWT_SIGNING_KEY` válida, nem com `SEED_ENABLED=true` sem `SEED_DEFAULT_PASSWORD`.
@@ -185,3 +186,23 @@ segredos `SONAR_TOKEN` e `SONAR_HOST_URL` existem: os runners do GitHub não alc
   salt 16 bytes + subkey 32 bytes, em base64).
 - Perfis em `AspNetRoles`/`AspNetUserRoles` (`Admin`, `User`) mapeiam para realm roles.
 - O banco fica acessível em `localhost:1433` (somente local) para o processo de migração.
+
+### API interna de migração (opcional, [ADR-0005](docs/adr/0005-api-interna-de-migracao-para-keycloak.md))
+
+O Keycloak (SPI) e o Cadastro consultam o Legado por uma API interna, desligada por padrão: sem ela o Legado sobe
+e funciona sozinho.
+
+```bash
+./scripts/identity-network.sh       # rede Docker compartilhada workspace-identity (idempotente)
+./scripts/internal-credentials.sh   # CA local, certificado legado-api e chaves HMAC no .env (idempotente)
+docker compose -f docker-compose.yml -f docker-compose.identity.yml up -d --build
+```
+
+- Só em `https://legado-api:8443` (TLS 1.3, CA local em `secrets/internal/ca.crt`, que os chamadores copiam).
+  Na porta pública as rotas `/api/v1/internal/*` não existem, e o nginx devolve 404 para elas.
+- Cada chamada assina `X-Legado-Signature: keyId=<id>, t=<unix s>, n=<nonce>, v1=<HMAC>` (formato e vetores de
+  teste em `legado-backend/tests/Legado.Api.IntegrationTests/Internal/hmac-test-vectors.json`).
+- `secrets/` e `.env` não são versionados nem entram nas imagens.
+- Conta já migrada (`MigratedAt` preenchido) que entra com a senha certa vê o aviso e é levada ao Cadastro em 5 s
+  (`CADASTRO_URL`, padrão `http://localhost:4300/`). O autocadastro do Legado continua aberto.
+  E2E desse modo: `E2E_MIGRATED_LOGIN=<conta migrada> E2E_MIGRATED_PASSWORD=<senha> ./scripts/e2e.sh`.

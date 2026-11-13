@@ -32,7 +32,7 @@ legado-database/   Migrations EF (Legado.Database), migrator (EF bundle + sqlcmd
 legado-backend/    API .NET 10 (Domain, Application, Infrastructure, Api) + tests/
 legado-frontend/   Angular 22 (standalone, signals, zoneless, Signal Forms, Vitest, Stylelint) + nginx
 e2e/               Playwright + axe-core (desktop, tablet, celular) contra o docker compose (scripts/e2e.sh)
-docs/adr/          ADR-0001 (auth legada), ADR-0002 (ViaCEP/IBGE)
+docs/adr/          ADR-0001 (auth legada), ADR-0002 (ViaCEP/IBGE), ADR-0005 (API interna de migração)
 docker-compose.yml sqlserver -> migrator -> api -> web
 ```
 
@@ -44,6 +44,11 @@ docker-compose.yml sqlserver -> migrator -> api -> web
   no servidor a cada request (`sstamp`/bloqueio), logout revoga no servidor, token sem dado pessoal, nada em
   `localStorage`/`sessionStorage`, CSP sem `unsafe-inline` e com Trusted Types. Os testes em
   `tests/Legado.Api.IntegrationTests/Security/` garantem isso.
+- API interna de migração (ADR-0005), regras que **não podem regredir**: desligada por padrão (o Legado nunca
+  depende do Keycloak nem do Cadastro); só na porta HTTPS interna (8443), nunca na pública nem no nginx; assinatura
+  HMAC com nonce, janela de 60 s e anti-reenvio; permissão por chamador (`keycloak`/`cadastro`); login, senha e
+  assinatura nunca em log; usuário inexistente gasta o mesmo tempo que senha errada. Cobertas por
+  `tests/Legado.Api.IntegrationTests/Internal/`. Credenciais locais: `scripts/internal-credentials.sh` (`secrets/`).
 - Imagens Docker fixadas por **tag + digest**: atualize os dois juntos.
 - Testes .NET: xUnit v3 no **Microsoft.Testing.Platform** (`global.json`) e cobertura via
   `Microsoft.Testing.Extensions.CodeCoverage`.

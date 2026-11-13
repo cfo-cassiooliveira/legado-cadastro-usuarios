@@ -18,6 +18,27 @@
           Cadastro realizado! Entre com seu login e senha.
         </p>
       }
+      @if (accountMigrated()) {
+        <div class="alert alert--info" role="alert">
+          <p>{{ migratedMessage() }}</p>
+          @if (newSystemUrl(); as url) {
+            <div class="alert__actions">
+              <a class="btn btn--primary btn--small" [href]="url" i18n>Ir para o novo sistema</a>
+              @if (redirecting()) {
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--small"
+                  data-testid="stay-here"
+                  (click)="stayHere()"
+                  i18n
+                >
+                  Ficar nesta página
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
       @if (errorMessage(); as message) {
         <p class="alert alert--error" role="alert">{{ message }}</p>
       }

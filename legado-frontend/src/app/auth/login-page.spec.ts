@@ -2,24 +2,28 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { createLoggerSpy, LoggerSpy, provideLoggerSpy } from '../core/app-logger.testing';
+import { ExternalNavigation } from '../core/external-navigation';
 import { AuthStore } from './auth-store';
-import { LoginPage } from './login-page';
+import { LoginPage, REDIRECT_DELAY_MS } from './login-page';
 
 describe('LoginPage', () => {
   const login = vi.fn();
   let logger: LoggerSpy;
+  const go = vi.fn();
   let fixture: ComponentFixture<LoginPage>;
   let element: HTMLElement;
 
   beforeEach(async () => {
     login.mockReset();
     logger = createLoggerSpy();
+    go.mockReset();
     TestBed.configureTestingModule({
       imports: [LoginPage],
       providers: [
         provideRouter([]),
         { provide: AuthStore, useValue: { login } },
         provideLoggerSpy(logger),
+        { provide: ExternalNavigation, useValue: { go } },
       ],
     });
     fixture = TestBed.createComponent(LoginPage);
@@ -90,6 +94,89 @@ describe('LoginPage', () => {
       status: 401,
     });
     expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  function migrated(newSystemUrl?: string): HttpErrorResponse {
+    return new HttpErrorResponse({
+      status: 401,
+      error: { errors: { credentials: ['auth.account_migrated'] }, newSystemUrl },
+    });
+  }
+
+  it('conta migrada: avisa, mostra o link e redireciona para o Cadastro', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    login.mockRejectedValue(migrated('http://localhost:4300/'));
+
+    await signIn();
+
+    const notice = element.querySelector('.alert--info');
+    expect(notice?.getAttribute('role')).toBe('alert');
+    expect(notice?.textContent).toContain('Sua conta foi transferida para o novo sistema.');
+    expect(notice?.textContent).toContain('em instantes');
+    expect(notice?.querySelector('a')?.getAttribute('href')).toBe('http://localhost:4300/');
+    expect(element.querySelector('.alert--error')).toBeNull();
+    expect(go).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(REDIRECT_DELAY_MS);
+
+    expect(go).toHaveBeenCalledWith('http://localhost:4300/');
+    expect(logger.warning).toHaveBeenCalledWith('auth.account_migrated', {
+      source: 'login-page',
+      status: 401,
+    });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it('"Ficar nesta página" cancela o redirecionamento e mantém o link', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    login.mockRejectedValue(migrated('http://localhost:4300/'));
+    await signIn();
+
+    element.querySelector<HTMLButtonElement>('[data-testid="stay-here"]')?.click();
+    await fixture.whenStable();
+    vi.advanceTimersByTime(REDIRECT_DELAY_MS);
+
+    expect(go).not.toHaveBeenCalled();
+    expect(element.querySelector('[data-testid="stay-here"]')).toBeNull();
+    expect(element.querySelector('.alert--info')?.textContent).not.toContain('em instantes');
+    expect(element.querySelector('.alert--info a')?.textContent?.trim()).toBe(
+      'Ir para o novo sistema',
+    );
+  });
+
+  it('conta migrada sem endereço do Cadastro: só o aviso, sem link nem redirecionamento', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    login.mockRejectedValue(migrated());
+
+    await signIn();
+    vi.advanceTimersByTime(REDIRECT_DELAY_MS);
+
+    expect(element.querySelector('.alert--info')?.textContent).toContain('transferida');
+    expect(element.querySelector('.alert--info a')).toBeNull();
+    expect(go).not.toHaveBeenCalled();
+  });
+
+  it('nova tentativa limpa o aviso e cancela o redirecionamento', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    login.mockRejectedValueOnce(migrated('http://localhost:4300/'));
+    await signIn();
+    login.mockRejectedValueOnce(
+      new HttpErrorResponse({
+        status: 401,
+        error: { errors: { credentials: ['auth.invalid_credentials'] } },
+      }),
+    );
+
+    await signIn('errada');
+    vi.advanceTimersByTime(REDIRECT_DELAY_MS);
+
+    expect(go).not.toHaveBeenCalled();
+    expect(element.querySelector('.alert--info')).toBeNull();
+    expect(element.querySelector('.alert--error')?.textContent).toContain(
+      'Login ou senha inválidos.',
+    );
   });
 
   it('rate limit é warning', async () => {

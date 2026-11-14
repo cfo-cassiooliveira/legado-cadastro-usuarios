@@ -2,6 +2,8 @@
 # Testes E2E do frontend (Playwright + axe-core em desktop, tablet e celular) contra o docker compose.
 # Roda no container oficial do Playwright: a máquina só precisa do Docker.
 # Uso (na raiz do projeto, com o stack de pé): ./scripts/e2e.sh [argumentos do "playwright test"]
+# Com docker-compose.identity.yml, E2E_MIGRATED_LOGIN/E2E_MIGRATED_PASSWORD (conta já migrada) ligam o teste do login
+# migrado; E2E_SCREENSHOTS=1 salva a captura em e2e/test-results.
 set -euo pipefail
 
 PLAYWRIGHT_IMAGE="mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f"
@@ -24,6 +26,7 @@ fi
 
 MSYS_NO_PATHCONV=1 docker run --rm --ipc=host \
   "${network_args[@]}" \
+  -e E2E_MIGRATED_LOGIN -e E2E_MIGRATED_PASSWORD -e E2E_SCREENSHOTS \
   -v "${host_dir}/e2e:/e2e" \
   -v legado-e2e-node-modules:/e2e/node_modules \
   -w /e2e \

@@ -5,8 +5,11 @@ namespace Legado.Api.Common;
 /// <summary>Converte falhas do Result pattern em Problem Details (RFC 9457).</summary>
 internal static class ResultHttpExtensions
 {
-    /// <summary>Gera a resposta HTTP de erro a partir do primeiro tipo de erro (400, 401, 404 ou 409), com os códigos por campo.</summary>
-    public static IResult ToProblem(this Result result)
+    /// <summary>
+    /// Gera a resposta HTTP de erro a partir do primeiro tipo de erro (400, 401, 404 ou 409), com os códigos por campo e,
+    /// quando informados, campos extras do contrato (ex.: <c>newSystemUrl</c> da conta migrada).
+    /// </summary>
+    public static IResult ToProblem(this Result result, IReadOnlyDictionary<string, object?>? extensions = null)
     {
         ArgumentNullException.ThrowIfNull(result);
         if (result.IsSuccess)
@@ -36,6 +39,9 @@ internal static class ResultHttpExtensions
         return TypedResults.Problem(
             statusCode: status,
             title: title,
-            extensions: new Dictionary<string, object?>(StringComparer.Ordinal) { ["errors"] = errors });
+            extensions: new Dictionary<string, object?>(extensions ?? new Dictionary<string, object?>(), StringComparer.Ordinal)
+            {
+                ["errors"] = errors,
+            });
     }
 }

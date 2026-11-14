@@ -5,6 +5,10 @@
     <ProjectReference Include="..\..\..\legado-database\src\Legado.Database\Legado.Database.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Vetores da assinatura HMAC (ADR-0005), compartilhados com os testes do Keycloak e do Cadastro. -->
+    <None Update="Internal\hmac-test-vectors.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="NSubstitute" />

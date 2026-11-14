@@ -51,10 +51,16 @@ namespace Legado.Database.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<Guid?>("KeycloakUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("MigratedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("NormalizedEmail")
@@ -143,6 +149,11 @@ namespace Legado.Database.Migrations
                         });
 
                     b.HasKey("Id");
+
+                    b.HasIndex("KeycloakUserId")
+                        .IsUnique()
+                        .HasDatabaseName("KeycloakUserIdIndex")
+                        .HasFilter("[KeycloakUserId] IS NOT NULL");
 
                     b.HasIndex("NormalizedEmail")
                         .IsUnique()

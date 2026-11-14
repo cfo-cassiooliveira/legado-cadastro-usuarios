@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Legado.Api.Common;
 using Legado.Application.Auth;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace Legado.Api.Auth;
@@ -30,14 +31,21 @@ internal static class AuthEndpoints
         return app;
     }
 
-    /// <summary>Autentica, grava o fingerprint em cookie HttpOnly e devolve apenas o token no corpo.</summary>
+    /// <summary>
+    /// Autentica, grava o fingerprint em cookie HttpOnly e devolve apenas o token no corpo. Conta já migrada para o
+    /// Keycloak recebe também o endereço do Cadastro (<c>newSystemUrl</c>), para onde a tela redireciona.
+    /// </summary>
     private static async Task<IResult> LoginAsync(
-        LoginCommand command, ILoginHandler handler, HttpResponse response, CancellationToken cancellationToken)
+        LoginCommand command, ILoginHandler handler, IOptions<MigrationRedirectOptions> migration, HttpResponse response,
+        CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return result.ToProblem();
+            var migrated = result.Errors.Any(e => e.Code == ILoginHandler.AccountMigratedCode);
+            return migrated && migration.Value.NewSystemUrl is { } url
+                ? result.ToProblem(new Dictionary<string, object?>(StringComparer.Ordinal) { ["newSystemUrl"] = url.AbsoluteUri })
+                : result.ToProblem();
         }
 
         var token = result.Value;

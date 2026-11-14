@@ -7,12 +7,14 @@ export interface ApiProblem {
   readonly fieldErrors: Readonly<Record<string, readonly string[]>>;
   /** Código geral do problema, quando a API informa (ex.: `address_service.unavailable`). */
   readonly code: string | null;
+  /** Endereço do novo sistema (conta já migrada); só http(s) absoluto, senão `null`. */
+  readonly newSystemUrl: string | null;
 }
 
 /** Converte qualquer erro de HTTP em {@link ApiProblem}; erros de rede viram status 0. */
 export function toApiProblem(error: unknown): ApiProblem {
   if (!(error instanceof HttpErrorResponse)) {
-    return { status: 0, fieldErrors: {}, code: null };
+    return { status: 0, fieldErrors: {}, code: null, newSystemUrl: null };
   }
 
   const body: unknown = error.error;
@@ -20,6 +22,7 @@ export function toApiProblem(error: unknown): ApiProblem {
     status: error.status,
     fieldErrors: readFieldErrors(body),
     code: readCode(body),
+    newSystemUrl: readHttpUrl(body),
   };
 }
 
@@ -39,6 +42,16 @@ function readFieldErrors(body: unknown): Record<string, readonly string[]> {
 
 function readCode(body: unknown): string | null {
   return isRecord(body) && typeof body['code'] === 'string' ? body['code'] : null;
+}
+
+// O valor vira destino de redirecionamento: nada além de http(s) absoluto (javascript:, data: etc. são ignorados).
+function readHttpUrl(body: unknown): string | null {
+  const value = isRecord(body) ? body['newSystemUrl'] : null;
+  if (typeof value !== 'string' || !URL.canParse(value)) {
+    return null;
+  }
+  const { protocol } = new URL(value);
+  return protocol === 'https:' || protocol === 'http:' ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

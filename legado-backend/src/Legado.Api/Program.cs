@@ -3,6 +3,7 @@ using Legado.Api.Auth;
 using Legado.Api.ClientLogs;
 using Legado.Api.Common;
 using Legado.Api.Health;
+using Legado.Api.Internal;
 using Legado.Api.Users;
 using Legado.Application;
 using Legado.Infrastructure;
@@ -12,7 +13,12 @@ using Microsoft.AspNetCore.HttpOverrides;
 var builder = WebApplication.CreateBuilder(args);
 
 // Não revela o servidor/versão no header "Server" (OWASP A02).
-builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.AddServerHeader = false;
+    // API interna (ADR-0005): só com InternalApi:Enabled, porta HTTPS própria além da pública.
+    options.ConfigureInternalEndpoints(builder.Configuration);
+});
 
 builder.Services.AddLegacyLogging(builder.Configuration, builder.Environment);
 builder.Services.AddProblemDetails();
@@ -21,6 +27,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddLegacyAuthentication(builder.Configuration);
+builder.Services.AddInternalApi(builder.Configuration);
 builder.Services.AddLegacyRateLimiting(builder.Configuration);
 builder.Services.AddLegacyHealthChecks(builder.Configuration);
 
@@ -36,6 +43,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+app.UseInternalApiPortIsolation(app.Configuration);
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ApiResponseHeadersMiddleware>();
 app.UseLegacyRequestLogging();
@@ -59,6 +67,7 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapAddressEndpoints();
 app.MapClientLogEndpoints();
+app.MapInternalEndpoints(app.Configuration);
 
 await using (var scope = app.Services.CreateAsyncScope())
 {

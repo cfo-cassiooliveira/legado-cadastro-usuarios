@@ -14,6 +14,15 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     /// <summary>Endereço residencial (colunas <c>Address*</c>).</summary>
     public UserAddress Address { get; set; } = new();
 
+    /// <summary>
+    /// Quando a conta passou a ser gerida pelo Keycloak (UTC); preenchida só depois que o usuário tem senha lá
+    /// (ADR-0005). Conta migrada não entra mais no Legado.
+    /// </summary>
+    public DateTimeOffset? MigratedAt { get; set; }
+
+    /// <summary>Id do usuário correspondente no Keycloak, gravado junto com <see cref="MigratedAt"/>.</summary>
+    public Guid? KeycloakUserId { get; set; }
+
     /// <summary>Data de criação (UTC), preenchida pelo interceptor de auditoria.</summary>
     public DateTimeOffset CreatedAt { get; set; }
 

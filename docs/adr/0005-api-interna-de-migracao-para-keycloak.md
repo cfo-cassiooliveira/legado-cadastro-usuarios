@@ -24,14 +24,20 @@ independente**: desligar o Keycloak ou o Cadastro não pode afetá-lo.
    1 ano, SAN `legado-api`). Os chamadores confiam só nessa CA.
 4. **Autenticação por HMAC-SHA256**, chave de 256 bits por chamador (`keycloak`, `cadastro`), até duas ativas por
    chamador para troca sem parada. Cabeçalho:
-   `X-Legado-Signature: keyId=<id>, t=<unix s>, v1=<base64(HMAC(chave, t\nMÉTODO\nrota\nhex(SHA-256(corpo))))>`.
+   `X-Legado-Signature: keyId=<id>, t=<unix s>, n=<nonce>, v1=<base64(HMAC(chave, t\nnonce\nMÉTODO\nrota\nhex(SHA-256(corpo))))>`.
    Recusa (401 genérico) por `keyId` desconhecido, `|agora − t| > 60 s`, assinatura inválida (comparação em tempo
-   constante) ou reenvio (cache das assinaturas dos últimos 60 s). Permissões: `keycloak` → verificação, consulta e
+   constante) ou reenvio (nonce já visto para a chave nos últimos 120 s). O nonce (16 bytes aleatórios em base64url, um por
+   chamada) deixa passar retentativas legítimas idênticas no mesmo segundo, que uma chave de reenvio baseada na
+   própria assinatura recusaria. Permissões: `keycloak` → verificação, consulta e
    marcação; `cadastro` → checagem de existência (403 fora disso).
 5. A verificação usa o Identity com lockout e verifica um hash fictício para usuário inexistente (tempo equalizado).
 6. Colunas `MigratedAt` e `KeycloakUserId` (expand). Conta migrada: login com senha correta devolve
    `auth.account_migrated`; a marcação renova o `SecurityStamp` (sessões abertas caem).
-7. Autocadastro desligado por `Features:SelfRegistrationEnabled=false` (410 `registration.closed`).
+7. O autocadastro do Legado continua aberto (decisão revista na implementação: o Legado só muda no login de conta
+   migrada). O login de conta migrada com a senha certa devolve `newSystemUrl` (`Migration:NewSystemUrl`, só http(s)
+   absoluto, validado na subida), e a tela redireciona para o Cadastro em 5 s, com "Ficar nesta página" para cancelar.
+8. Migração de mão única (Legado → Keycloak): o Legado nunca recebe nem reserva contas criadas no Cadastro. O Keycloak
+   é o mandatório; login criado no Legado que já exista no Keycloak não migra (risco aceito, spec 001 RN-09).
 
 **Vetores de teste** (usados pelos testes do Legado, do Keycloak e do Cadastro) são gerados na T10 e versionados em
 `legado-backend/tests/.../Internal/hmac-test-vectors.json`, com chave fictícia.

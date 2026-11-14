@@ -1,0 +1,30 @@
+# Integração opcional com o Keycloak e o Cadastro (ADR-0005): liga a API interna de migração em https://legado-api:8443
+# na rede Docker compartilhada "workspace-identity". Sem este arquivo o Legado sobe sozinho, sem porta interna.
+# Pré-requisitos (idempotentes): ./scripts/identity-network.sh && ./scripts/internal-credentials.sh
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.identity.yml up -d --build
+services:
+  api:
+    environment:
+      InternalApi__Enabled: "true"
+      InternalApi__CertificatePath: /run/secrets/legado-internal/legado-api.crt
+      InternalApi__CertificateKeyPath: /run/secrets/legado-internal/legado-api.key
+      InternalApi__Keys__keycloak-1__Caller: keycloak
+      InternalApi__Keys__keycloak-1__Secret: ${LEGADO_INTERNAL_KEYCLOAK_KEY:?rode ./scripts/internal-credentials.sh}
+      InternalApi__Keys__cadastro-1__Caller: cadastro
+      InternalApi__Keys__cadastro-1__Secret: ${LEGADO_INTERNAL_CADASTRO_KEY:?rode ./scripts/internal-credentials.sh}
+      # Login de conta já migrada leva a pessoa para o portal Cadastro (spec 001, US-04).
+      Migration__NewSystemUrl: ${CADASTRO_URL:-http://localhost:4300/}
+    # Só o certificado do servidor; a chave da CA nunca entra em container.
+    volumes:
+      - ./secrets/internal/server:/run/secrets/legado-internal:ro
+    networks:
+      default: {}
+      identity:
+        aliases:
+          - legado-api
+
+networks:
+  identity:
+    name: workspace-identity
+    external: true

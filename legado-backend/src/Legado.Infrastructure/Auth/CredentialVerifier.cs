@@ -39,6 +39,12 @@ internal sealed partial class CredentialVerifier(
         }
 
         WarnIfUpdateFailed(await userManager.ResetAccessFailedCountAsync(user), user.Id, "reset failed attempts");
+        if (user.MigratedAt is not null)
+        {
+            // Só depois da senha conferida: quem não sabe a senha não descobre que a conta foi migrada.
+            return new CredentialVerification(CredentialStatus.Migrated, UserId: user.Id);
+        }
+
         var roles = await userManager.GetRolesAsync(user);
         var securityStamp = user.SecurityStamp ?? await userManager.GetSecurityStampAsync(user);
         var authenticated = new AuthenticatedUser(user.Id, user.UserName ?? userName, [.. roles], securityStamp);

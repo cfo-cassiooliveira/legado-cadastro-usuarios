@@ -10,6 +10,7 @@ dist/
 .angular/
 # Segredos locais (Art. IV.4)
 .env
+secrets/
 # IDE
 .vs/
 .idea/

@@ -9,6 +9,8 @@ public enum CredentialStatus
     Invalid,
     /// <summary>Conta bloqueada temporariamente por excesso de tentativas.</summary>
     LockedOut,
+    /// <summary>Senha correta, mas a conta já foi migrada para o Keycloak (ADR-0005): não entra mais no Legado.</summary>
+    Migrated,
 }
 
 /// <summary>Resultado da verificação de usuário/senha.</summary>

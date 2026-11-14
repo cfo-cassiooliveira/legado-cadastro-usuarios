@@ -24,6 +24,10 @@ internal static class AuthenticationSetup
             .Bind(configuration.GetSection(JwtOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
+        services.AddOptions<MigrationRedirectOptions>()
+            .Bind(configuration.GetSection(MigrationRedirectOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddSingleton<ITokenIssuer, JwtTokenIssuer>();
         services.AddScoped<LegacyJwtBearerEvents>();
 

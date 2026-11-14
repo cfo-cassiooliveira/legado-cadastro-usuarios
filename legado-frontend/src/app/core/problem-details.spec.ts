@@ -25,8 +25,32 @@ describe('toApiProblem', () => {
     expect(toApiProblem(error).code).toBe('address_service.unavailable');
   });
 
+  it('lê o endereço do novo sistema da conta migrada', () => {
+    const error = new HttpErrorResponse({
+      status: 401,
+      error: { newSystemUrl: 'http://localhost:4300/' },
+    });
+
+    expect(toApiProblem(error).newSystemUrl).toBe('http://localhost:4300/');
+  });
+
+  // Destino de redirecionamento: qualquer coisa além de http(s) absoluto é descartada.
+  it.each(['javascript:alert(1)', 'data:text/html,oi', '/relativo', 42])(
+    'descarta endereço inseguro ou inválido (%s)',
+    (newSystemUrl) => {
+      const error = new HttpErrorResponse({ status: 401, error: { newSystemUrl } });
+
+      expect(toApiProblem(error).newSystemUrl).toBeNull();
+    },
+  );
+
   it('trata erro que não é HTTP como falha de rede', () => {
-    expect(toApiProblem(new Error('boom'))).toEqual({ status: 0, fieldErrors: {}, code: null });
+    expect(toApiProblem(new Error('boom'))).toEqual({
+      status: 0,
+      fieldErrors: {},
+      code: null,
+      newSystemUrl: null,
+    });
   });
 });
 
@@ -37,15 +61,18 @@ describe('error messages', () => {
   });
 
   it('prioriza rede, rate limit e depois o primeiro código', () => {
-    expect(messageForProblem({ status: 0, fieldErrors: {}, code: null })).toContain('servidor');
-    expect(messageForProblem({ status: 429, fieldErrors: {}, code: null })).toContain(
-      'Muitas tentativas',
-    );
+    expect(
+      messageForProblem({ status: 0, fieldErrors: {}, code: null, newSystemUrl: null }),
+    ).toContain('servidor');
+    expect(
+      messageForProblem({ status: 429, fieldErrors: {}, code: null, newSystemUrl: null }),
+    ).toContain('Muitas tentativas');
     expect(
       messageForProblem({
         status: 401,
         fieldErrors: { credentials: ['auth.invalid_credentials'] },
         code: null,
+        newSystemUrl: null,
       }),
     ).toBe('Login ou senha inválidos.');
   });

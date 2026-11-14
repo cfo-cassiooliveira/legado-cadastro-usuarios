@@ -11,7 +11,13 @@ public sealed record LoginCommand(string? UserName, string? Password);
 /// <summary>Autentica usuário e senha e emite o token de acesso.</summary>
 public interface ILoginHandler
 {
-    /// <summary>Autentica e emite o token (com fingerprint); qualquer falha retorna o mesmo erro genérico.</summary>
+    /// <summary>Código da conta já migrada para o Keycloak (a tela leva a pessoa ao novo sistema).</summary>
+    const string AccountMigratedCode = "auth.account_migrated";
+
+    /// <summary>
+    /// Autentica e emite o token (com fingerprint); qualquer falha retorna o mesmo erro genérico, exceto a conta já
+    /// migrada para o Keycloak com a senha correta (<see cref="AccountMigratedCode"/>).
+    /// </summary>
     Task<Result<AccessToken>> HandleAsync(LoginCommand command, CancellationToken cancellationToken);
 }
 
@@ -24,6 +30,10 @@ internal sealed partial class LoginHandler(
     // Mesma resposta para senha errada, usuário inexistente ou bloqueado: evita enumeração de contas (OWASP A07).
     private static readonly DomainError InvalidCredentials =
         new("auth.invalid_credentials", "credentials", "Invalid user name or password.", ErrorType.Unauthorized);
+
+    // Só aparece com a senha correta (RN-08): quem não sabe a senha recebe a resposta genérica acima.
+    private static readonly DomainError AccountMigrated =
+        new(ILoginHandler.AccountMigratedCode, "credentials", "This account was moved to the new system.", ErrorType.Unauthorized);
 
     /// <summary>Verifica as credenciais, emite o token e registra sucesso, falha ou bloqueio.</summary>
     public async Task<Result<AccessToken>> HandleAsync(LoginCommand command, CancellationToken cancellationToken)
@@ -44,6 +54,10 @@ internal sealed partial class LoginHandler(
                 LogSignedIn(user.Id);
                 return Result.Success(token);
 
+            case { Status: CredentialStatus.Migrated }:
+                LogMigrated(verification.UserId);
+                return Result.Failure<AccessToken>(AccountMigrated);
+
             case { Status: CredentialStatus.LockedOut }:
                 LogLockedOut(verification.UserId);
                 return Result.Failure<AccessToken>(InvalidCredentials);
@@ -57,6 +71,9 @@ internal sealed partial class LoginHandler(
     // Eventos de autenticação são logados para auditoria (OWASP A09), sem login/senha (LGPD).
     [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} signed in")]
     private partial void LogSignedIn(Guid userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in rejected: user {UserId} was migrated to Keycloak")]
+    private partial void LogMigrated(Guid? userId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in rejected: user {UserId} is locked out")]
     private partial void LogLockedOut(Guid? userId);

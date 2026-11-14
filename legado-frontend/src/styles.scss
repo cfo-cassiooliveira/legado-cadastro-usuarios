@@ -433,6 +433,18 @@ a {
     border-color: var(--success-border);
     color: var(--success-text);
   }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &--info {
+    background: var(--primary-soft);
+    border-color: var(--info-border);
+    color: var(--info-text);
+  }
 }
 
 /* ---------- Stepper ---------- */

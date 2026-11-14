@@ -52,6 +52,11 @@ docker-compose.yml sqlserver -> migrator -> api -> web
   containers → Docker GELF driver em `udp://127.0.0.1:12201` com `tag` = `service_name`. Todo log novo usa
   `[LoggerMessage]`/message template e **nunca** dado pessoal ou segredo (os testes em
   `tests/Legado.Api.IntegrationTests/Logging/` inspecionam os eventos reais).
+- **Dado pessoal em log, quando inevitável, só como campo estruturado** com o nome do tipo: `{Cpf}`, `{Cnpj}`,
+  `{Phone}`/`{MobilePhone}`, `{UserName}`, `{Email}` no message template, **nunca** concatenado ou interpolado no
+  texto. O Graylog mascara pelo nome do campo e troca o mesmo valor dentro do texto, sem adivinhar o tipo
+  (ADR-0002 do `../graylog`). Nome fora dessa lista não tem máscara garantida: nome novo entra antes nas listas
+  `LGPD_*` do `../graylog/provisioning/provision.sh`.
 - Níveis (regra em `observability.md`): exceção capturada = Error; falha de negócio ou falha prevista de banco
   (unicidade/concorrência) = Warning + resultado tratado; sucesso = Information. Frontend usa `AppLogger`
   (`POST /api/v1/client-logs`) e o `GlobalErrorHandler`; todo catch passa pelo logger.

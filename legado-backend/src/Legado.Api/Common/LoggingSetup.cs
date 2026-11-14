@@ -6,6 +6,15 @@ using Serilog.Sinks.Graylog.Core.Transport;
 namespace Legado.Api.Common;
 
 /// <summary>Serilog com logs estruturados em JSON no console e envio GELF opcional para o Graylog.</summary>
+/// <remarks>
+/// <para><b>Dados pessoais (LGPD)</b>: por regra, nenhum log contém dado pessoal. Quando for inevitável, o dado vai
+/// <b>só como campo estruturado</b> do message template, com o nome do tipo: <c>{Cpf}</c>, <c>{Cnpj}</c>,
+/// <c>{Phone}</c>/<c>{MobilePhone}</c>, <c>{UserName}</c> ou <c>{Email}</c>. Nunca concatenado ou interpolado no texto.</para>
+/// <para>O sink GELF envia cada propriedade como campo próprio, além do texto renderizado (<c>message</c> e
+/// <c>full_message</c>). O pipeline do Graylog reconhece o tipo pelo nome do campo, mascara o campo
+/// (ex.: <c>***.456.789-**</c>, <c>11*****4321</c>, <c>mar***</c>) e troca o mesmo valor dentro do texto, sem adivinhar.
+/// Nome fora dessa lista não tem máscara garantida (ADR-0002 do projeto graylog).</para>
+/// </remarks>
 internal static class LoggingSetup
 {
     /// <summary>Nome do serviço em todos os logs (campo <c>service_name</c> usado pelos streams do Graylog).</summary>

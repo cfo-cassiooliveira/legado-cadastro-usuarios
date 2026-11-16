@@ -162,6 +162,13 @@ dado pessoal nunca vai em template de escopo. Esses campos e textos não saem da
 (mensagem e stack trace seguem como estão, por isso nunca devem conter dado pessoal) e nomes de campo fora das listas;
 o Graylog continua mascarando o que escapar, como defesa em profundidade.
 
+**Logs do navegador** (`POST /api/v1/client-logs`): o texto vem de fora, sem campo estruturado. A API tira query
+string e fragmento de `ClientSource` e troca, em `ClientMessage`, `ClientSource` e `ClientStack`, e-mail (também
+`%40`), CNPJ formatado, CPF e celular com DDD reconhecidos pelo formato pela mesma máscara (`ana***@gmail`,
+`***.456.789-**`, `11*****4321`; 11 dígitos sem pontuação viram CPF), sem token
+(`Common/Pseudonymization/PersonalDataTextMasker.cs`, testes em `Logging/ClientLogEndpointTests.cs` e
+`Logging/PersonalDataTextMaskerTests.cs`). Celular sem DDD não é reconhecido: o frontend nunca envia valor digitado.
+
 Chave: `./scripts/log-pseudonymization-key.sh` grava `LOG_PSEUDONYMIZATION_KEY_K1` no `.env` e no user-secrets (copia
 do `../cadastro/.env` quando já existe lá). Rotação anual:
 `./scripts/log-pseudonymization-key.sh k2` (a mesma `k2` do `../cadastro`) e `LOG_PSEUDONYMIZATION_CURRENT_KEY_ID=k2`

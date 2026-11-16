@@ -5,3 +5,7 @@
 # Chave fictícia e pública dos vetores de teste da assinatura HMAC (ADR-0005), compartilhada com os testes do
 # Keycloak e do Cadastro; nunca configurada em ambiente algum (as chaves reais ficam no .env, gerado por script).
 2693333ce0490df1271de2a89512d138122b25a9:legado-backend/tests/Legado.Api.IntegrationTests/Internal/hmac-test-vectors.json:generic-api-key:3
+# Vetores de teste da pseudonimização (ADR-0003 do graylog): chave HMAC FICTÍCIA e pública (bytes 00..1f) e token calculado com ela; nunca usada em ambiente algum (a chave real fica no .env, gerado por script).
+eab6d08d430590f9dfa4bb18b7ba0cdfd261454c:legado-backend/tests/Legado.Api.IntegrationTests/Logging/PseudonymizationAcceptanceTests.cs:generic-api-key:22
+eab6d08d430590f9dfa4bb18b7ba0cdfd261454c:legado-backend/tests/Legado.Api.IntegrationTests/Logging/PseudonymizationAcceptanceTests.cs:generic-api-key:23
+eab6d08d430590f9dfa4bb18b7ba0cdfd261454c:legado-backend/tests/Legado.Api.IntegrationTests/Logging/PseudonymizationTests.cs:generic-api-key:16

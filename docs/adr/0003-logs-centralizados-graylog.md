@@ -37,7 +37,9 @@ ricos de **todos** os serviços, sem passar a depender dele para rodar.
 6. **Logs do navegador**: o frontend envia eventos (erros JS via `ErrorHandler` global, falhas capturadas e operações
    concluídas) para `POST /api/v1/client-logs`, que é anônimo porque falhas ocorrem antes do login. O endpoint
    valida nível e evento por lista fechada e padrão, limita tamanhos, remove caracteres de controle (log injection),
-   mascara e-mail/CPF e tem rate limit próprio. Os eventos vão para o stream `Legado - Navegador`.
+   tira query string e fragmento da origem, troca e-mail, CNPJ formatado, CPF e celular com DDD reconhecidos pelo
+   formato na mensagem, na origem e no stack pela máscara do ADR-0002 do `../graylog` (sem token: texto livre) e tem
+   rate limit próprio. Os eventos vão para o stream `Legado - Navegador`.
 7. **Níveis** seguem a regra do workspace (`observability.md`): exceção capturada = Error; falha de negócio ou falha
    prevista de banco (unicidade no insert, concorrência no update) = Warning com resultado tratado (409); sucesso =
    Information.

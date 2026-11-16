@@ -75,7 +75,9 @@ docker-compose.yml sqlserver -> migrator -> api -> web
   do `../cadastro`; o compose mapeia k1 e k2 (rotação: k2 + `LOG_PSEUDONYMIZATION_CURRENT_KEY_ID=k2`, depois a K1 sai).
 - Níveis (regra em `observability.md`): exceção capturada = Error; falha de negócio ou falha prevista de banco
   (unicidade/concorrência) = Warning + resultado tratado; sucesso = Information. Frontend usa `AppLogger`
-  (`POST /api/v1/client-logs`) e o `GlobalErrorHandler`; todo catch passa pelo logger.
+  (`POST /api/v1/client-logs`) e o `GlobalErrorHandler`; todo catch passa pelo logger. O endpoint tira query string e
+  fragmento da origem e mascara pelo formato (`PersonalDataTextMasker`, máscara do `PersonalDataMasker`, sem token)
+  e-mail, CNPJ, CPF e celular com DDD em `ClientMessage`/`ClientSource`/`ClientStack`; nunca envie valor de formulário.
 - Serilog com `preserveStaticLogger: true` e request logging com o logger do host: nunca dependa do `Log.Logger`
   estático (um host descartado o encerrava e silenciava os logs dos outros).
 

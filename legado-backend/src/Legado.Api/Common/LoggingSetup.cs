@@ -44,6 +44,7 @@ internal static class LoggingSetup
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<PseudonymizationOptions>, PseudonymizationOptionsValidator>();
         services.AddSingleton<PseudonymTokenGenerator>();
+        services.AddSingleton<PersonalDataTextMask>(PersonalDataTextMasker.Mask);
         services.AddSingleton<PseudonymizationEnricher>();
 
         return services.AddSerilog((sp, logger) =>

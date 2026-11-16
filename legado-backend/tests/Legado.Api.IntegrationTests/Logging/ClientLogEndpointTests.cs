@@ -1,7 +1,11 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.RegularExpressions;
+using Legado.Api.Common.Pseudonymization;
 using Legado.Api.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog.Events;
 
 namespace Legado.Api.IntegrationTests.Logging;
@@ -104,6 +108,32 @@ public sealed class ClientLogEndpointTests(LegadoApiFactory factory)
 
         response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
         ClientEvent(correlation).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task MaskingTimeout_RedactsFieldsAndLogsWarningWithoutOriginalText()
+    {
+        var correlation = NewId();
+        const string secret = "ana.souza@gmail.com";
+        using var failing = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddSingleton(new PersonalDataTextMask(_ => throw new RegexMatchTimeoutException()))));
+        using var request = new HttpRequestMessage(HttpMethod.Post, Route)
+        {
+            Content = JsonContent.Create(new { level = "error", @event = "app.unhandled_error", message = secret, source = secret, stack = secret }),
+        };
+        request.Headers.Add("X-Correlation-Id", correlation);
+
+        var response = await failing.CreateClient().SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        var logged = ClientEvent(correlation);
+        CollectingLogSink.Scalar(logged.Properties["ClientMessage"]).ShouldBe("***");
+        CollectingLogSink.Scalar(logged.Properties["ClientSource"]).ShouldBe("***");
+        CollectingLogSink.Scalar(logged.Properties["ClientStack"]).ShouldBe("***");
+        var warnings = factory.Logs.WithProperty("correlation_id", correlation)
+            .Where(e => e.Level == LogEventLevel.Warning && e.MessageTemplate.Text.Contains("masking timed out", StringComparison.Ordinal)).ToList();
+        warnings.Count.ShouldBe(3);
+        warnings.ShouldAllBe(e => !e.RenderMessage(CultureInfo.InvariantCulture).Contains("ana"));
     }
     [Fact]
     public async Task Source_DropsQueryStringAndFragment_AndMasksEncodedEmail()

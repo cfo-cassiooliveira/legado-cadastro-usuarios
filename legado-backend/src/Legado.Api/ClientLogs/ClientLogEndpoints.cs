@@ -36,7 +36,7 @@ internal static partial class ClientLogEndpoints
     }
 
     /// <summary>Valida o evento e o registra com o nível correspondente.</summary>
-    private static IResult Receive(ClientLogRequest request, ILoggerFactory loggerFactory)
+    private static IResult Receive(ClientLogRequest request, ILoggerFactory loggerFactory, PersonalDataTextMask maskText)
     {
         var errors = Validate(request);
         if (errors.Count > 0)
@@ -46,15 +46,15 @@ internal static partial class ClientLogEndpoints
 
         var logger = loggerFactory.CreateLogger(LoggerCategory);
         var clientEvent = request.Event!; // Validado acima.
-        var message = Sanitize(logger, request.Message, MaxMessageLength);
-        var source = Sanitize(logger, WithoutQueryAndFragment(request.Source), MaxSourceLength);
+        var message = Sanitize(logger, maskText, request.Message, MaxMessageLength);
+        var source = Sanitize(logger, maskText, WithoutQueryAndFragment(request.Source), MaxSourceLength);
 
         // Campos extras do evento do navegador; log_source permite filtrar no Graylog.
         using (logger.BeginScope(new Dictionary<string, object?>
         {
             ["log_source"] = "browser",
             ["ClientStatus"] = request.Status,
-            ["ClientStack"] = Sanitize(logger, request.Stack, MaxStackLength, keepNewLines: true),
+            ["ClientStack"] = Sanitize(logger, maskText, request.Stack, MaxStackLength, keepNewLines: true),
         }))
         {
             switch (request.Level)
@@ -100,7 +100,7 @@ internal static partial class ClientLogEndpoints
     /// formato pela máscara do ADR-0002 (defesa em profundidade: o frontend não deve enviar dados pessoais) e limita o
     /// tamanho.
     /// </summary>
-    private static string Sanitize(ILogger logger, string? value, int maxLength, bool keepNewLines = false)
+    private static string Sanitize(ILogger logger, PersonalDataTextMask maskText, string? value, int maxLength, bool keepNewLines = false)
     {
         if (string.IsNullOrEmpty(value))
         {
@@ -111,7 +111,7 @@ internal static partial class ClientLogEndpoints
         var cleaned = (keepNewLines ? ControlExceptNewLine() : ControlCharacters()).Replace(bounded, " ");
         try
         {
-            return Truncate(PersonalDataTextMasker.Mask(cleaned), maxLength);
+            return Truncate(maskText(cleaned), maxLength);
         }
         catch (RegexMatchTimeoutException)
         {

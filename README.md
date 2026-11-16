@@ -25,6 +25,7 @@ Pré-requisito: Docker Desktop.
 
 ```bash
 cp .env.example .env      # preencha as senhas, a chave JWT e a senha da massa de demonstração
+./scripts/log-pseudonymization-key.sh   # chave dos tokens de log no .env (a mesma do ../cadastro; idempotente)
 docker compose up -d --build
 ```
 
@@ -51,12 +52,14 @@ o modelo [`.env.example`](.env.example), sem valores, com instruções para gera
 | `SEED_DEFAULT_PASSWORD` | Se `SEED_ENABLED=true` | Senha de todos os usuários de demonstração | 8+ caracteres com maiúscula, minúscula, número e símbolo |
 | `API_ENVIRONMENT` | Não (padrão `Production`) | Ambiente ASP.NET Core da API | `Production` ou `Development` (publica o OpenAPI na rede interna) |
 | `LEGADO_INTERNAL_KEYCLOAK_KEY` / `LEGADO_INTERNAL_CADASTRO_KEY` | Só com `docker-compose.identity.yml` | Chaves HMAC da API interna de migração, uma por chamador | Base64 de 32 bytes, geradas por `./scripts/internal-credentials.sh` |
+| `LOG_PSEUDONYMIZATION_KEY_K1` / `LOG_PSEUDONYMIZATION_KEY_K2` | A do `CURRENT_KEY_ID` (a API não sobe sem ela) | Chave HMAC que gera os campos `*_token` dos logs (ADR-0003 do `../graylog`); a mesma do `../cadastro` no ambiente | Base64 de 32 bytes, gerada ou copiada do `../cadastro/.env` por `./scripts/log-pseudonymization-key.sh` |
+| `LOG_PSEUDONYMIZATION_CURRENT_KEY_ID` | Não (padrão `k1`) | Id da chave que emite os tokens (rotação anual: `k2`...) | `k` + número |
 
 Se uma variável obrigatória faltar, o `docker compose` para com a mensagem `defina <VARIÁVEL> no .env`.
-A API também não sobe sem uma `JWT_SIGNING_KEY` válida, nem com `SEED_ENABLED=true` sem `SEED_DEFAULT_PASSWORD`.
+A API também não sobe sem uma `JWT_SIGNING_KEY` válida, sem a chave de pseudonimização atual (Base64 de 256+ bits), nem com `SEED_ENABLED=true` sem `SEED_DEFAULT_PASSWORD`.
 
 > Para desenvolvimento fora do Docker, use `dotnet user-secrets` no projeto `Legado.Api`
-> (`ConnectionStrings:LegadoDb`, `Jwt:SigningKey`), nunca o `appsettings.json`.
+> (`ConnectionStrings:LegadoDb`, `Jwt:SigningKey`, `Logging:Pseudonymization:Keys:k1`; o script acima grava esta última), nunca o `appsettings.json`.
 
 ## Funcionalidades
 
@@ -142,8 +145,29 @@ No frontend, o `AppLogger` envia cada evento para a API (só código do evento, 
 digitados ou URLs). Os testes de backend e frontend verificam o nível de cada um desses cenários.
 
 **O que nunca vai para os logs**: senha, token, fingerprint, cookie, `Authorization`, query string, corpo de
-requisição, e-mail, nome, celular e IP. Isso é garantido por teste de integração que inspeciona os eventos reais;
-o Graylog ainda mascara e-mail e CPF como defesa em profundidade.
+requisição, e-mail, nome, celular e IP. Isso é garantido por teste de integração que inspeciona os eventos reais.
+
+**Dado pessoal aprovado em ADR** (CPF, CNPJ, telefone, login, e-mail) só vai como campo estruturado com o nome do tipo
+(`{Cpf}`, `{Cnpj}`, `{Phone}`/`{MobilePhone}`, `{UserName}`, `{Email}`) e é **pseudonimizado na origem**
+(ADR-0003 do `../graylog`): o campo sai com a máscara (`***.456.789-**`, `12.3**.***/***1-90`, `11*****4321`, `mar***`,
+`ana***@gmail`) e ganha `<Campo>_token` (`k1-` + HMAC-SHA256 truncado), que permite achar todos os eventos do
+titular com igualdade exata (e-mail e login geram o mesmo token). Vale também dentro de objetos destruturados,
+dicionários e listas: o campo mascarado é gravado no Graylog como `Customer_Email` e o token vai no topo do evento
+como `Customer_Email_token` (nunca dentro do objeto, para não aparecer no texto), fora da consulta padrão do Cadastro. O texto
+(`message`/`full_message`) sai só com a máscara; valor fora do formato vira `***`, sem token. No texto dos escopos
+(`Scope`, renderizado em claro pelo provider), o valor é trocado pela máscara ou por `***`, exceto o curto (login com
+menos de 4 caracteres; CPF/CNPJ/telefone com menos de 8 dígitos), que fica como está para não corromper palavras: por isso
+dado pessoal nunca vai em template de escopo. Esses campos e textos não saem da API com o valor em claro (teste com servidor GELF TCP falso em
+`tests/Legado.Api.IntegrationTests/Logging/PseudonymizedGelfTests.cs`). **Não é tratado na origem**: a exceção
+(mensagem e stack trace seguem como estão, por isso nunca devem conter dado pessoal) e nomes de campo fora das listas;
+o Graylog continua mascarando o que escapar, como defesa em profundidade.
+
+Chave: `./scripts/log-pseudonymization-key.sh` grava `LOG_PSEUDONYMIZATION_KEY_K1` no `.env` e no user-secrets (copia
+do `../cadastro/.env` quando já existe lá). Rotação anual:
+`./scripts/log-pseudonymization-key.sh k2` (a mesma `k2` do `../cadastro`) e `LOG_PSEUDONYMIZATION_CURRENT_KEY_ID=k2`
+no `.env`; o `docker-compose.yml` já mapeia `k1` e `k2` (vazia = ausente). O legado só emite com a chave atual, então a
+`LOG_PSEUDONYMIZATION_KEY_K1` pode sair do `.env` logo após a troca; quem pesquisa (Cadastro) mantém a `k1` até o fim
+da retenção (30 dias) e depois a destrói. Sem a chave do `CurrentKeyId` a API não sobe.
 
 ## Health checks (rede interna)
 

@@ -57,11 +57,22 @@ docker-compose.yml sqlserver -> migrator -> api -> web
   containers → Docker GELF driver em `udp://127.0.0.1:12201` com `tag` = `service_name`. Todo log novo usa
   `[LoggerMessage]`/message template e **nunca** dado pessoal ou segredo (os testes em
   `tests/Legado.Api.IntegrationTests/Logging/` inspecionam os eventos reais).
-- **Dado pessoal em log, quando inevitável, só como campo estruturado** com o nome do tipo: `{Cpf}`, `{Cnpj}`,
-  `{Phone}`/`{MobilePhone}`, `{UserName}`, `{Email}` no message template, **nunca** concatenado ou interpolado no
-  texto. O Graylog mascara pelo nome do campo e troca o mesmo valor dentro do texto, sem adivinhar o tipo
-  (ADR-0002 do `../graylog`). Nome fora dessa lista não tem máscara garantida: nome novo entra antes nas listas
-  `LGPD_*` do `../graylog/provisioning/provision.sh`.
+- A proibição acima não tem exceção implícita (Constituição, Art. IV.6). Só um dado pessoal **aprovado em ADR**
+  vai ao log, e apenas como campo estruturado com o nome do tipo: `{Cpf}`, `{Cnpj}`, `{Phone}`/`{MobilePhone}`,
+  `{UserName}`, `{Email}` no message template, **nunca** concatenado ou interpolado (destruturado `{@Obj}` é
+  mascarado; o token vai no topo como `Obj_Campo_token`, fora da consulta padrão do Cadastro). A API **pseudonimiza na origem** (ADR-0003 do `../graylog`,
+  `Common/Pseudonymization/`): o `PseudonymizationEnricher` troca o campo pela máscara do ADR-0002 (`***.456.789-**`,
+  `11*****4321`, `mar***`, `ana***@gmail`) e soma `<Campo>_token` (`k1-` + HMAC-SHA256 truncado; e-mail e login dão
+  o mesmo token), em qualquer nível (objeto, dicionário, lista); fora do formato vira `***`, sem token. O texto
+  renderizado sai só com a máscara, nunca com o token. No `Scope` dos escopos o valor é trocado pela máscara (ou `***`),
+  exceto o curto (login < 4 caracteres, CPF/CNPJ/telefone < 8 dígitos), que fica em claro: nunca use dado pessoal em
+  template de escopo. A exceção não é alterada, então nunca leve dado pessoal nela. O Graylog é só a rede de segurança (ADR-0002 do
+  `../graylog`). Os nomes ficam em `PersonalDataFields`, iguais às listas `LGPD_*` do
+  `../graylog/provisioning/provision.sh`: nome novo entra nos dois. Regras que **não podem regredir**: vetores do
+  `plan.md` da spec 001 do graylog e nenhum valor em claro no GELF (`Logging/PseudonymizationTests.cs`,
+  `Logging/PseudonymizedGelfTests.cs`); sem chave `Logging:Pseudonymization:Keys:<CurrentKeyId>` válida a API não
+  sobe (chave vazia = ausente). Chave só em `.env`/user-secrets (`scripts/log-pseudonymization-key.sh [kN]`), a mesma
+  do `../cadastro`; o compose mapeia k1 e k2 (rotação: k2 + `LOG_PSEUDONYMIZATION_CURRENT_KEY_ID=k2`, depois a K1 sai).
 - Níveis (regra em `observability.md`): exceção capturada = Error; falha de negócio ou falha prevista de banco
   (unicidade/concorrência) = Warning + resultado tratado; sucesso = Information. Frontend usa `AppLogger`
   (`POST /api/v1/client-logs`) e o `GlobalErrorHandler`; todo catch passa pelo logger.

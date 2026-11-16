@@ -22,6 +22,9 @@ public sealed class LegadoApiFactory : WebApplicationFactory<Program>, IAsyncLif
     private static readonly string TestSigningKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
     private const string HighRateLimit = "10000";
 
+    /// <summary>Chave de pseudonimização dos logs (ADR-0003 do graylog), também gerada a cada execução.</summary>
+    public static readonly string PseudonymizationKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+
     // Mesma imagem (tag + digest) do docker-compose.yml e do migrator: testes reprodutíveis.
     private const string SqlServerImage =
         "mcr.microsoft.com/mssql/server:2025-latest@sha256:05644dad1266ca3d445d1e8f6d2ebb9a6a03df9a39376e0f7b48917356dca9d9";
@@ -70,6 +73,7 @@ public sealed class LegadoApiFactory : WebApplicationFactory<Program>, IAsyncLif
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:LegadoDb", _database.GetConnectionString());
         builder.UseSetting("Jwt:SigningKey", TestSigningKey);
+        builder.UseSetting("Logging:Pseudonymization:Keys:k1", PseudonymizationKey);
         builder.UseSetting("RateLimiting:CredentialsPermitsPerMinute", HighRateLimit);
         builder.UseSetting("RateLimiting:AddressLookupPermitsPerMinute", HighRateLimit);
         builder.UseSetting("RateLimiting:ClientLogsPermitsPerMinute", HighRateLimit);

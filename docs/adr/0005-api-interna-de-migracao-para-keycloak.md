@@ -1,9 +1,12 @@
 # ADR-0005: API interna de migração (TLS + HMAC), cadastro fechado e independência do Legado
 
-- **Status**: Proposto
+- **Status**: Aceito (2026-11-17)
 - **Data**: 2026-11-13
 - **Decisores**: Cassio Oliveira (responsável técnico)
 - **Artigos da Constituição relacionados**: Art. III.1, Art. III.4, Art. IV.4, Art. IV.6, Art. VIII.2, Art. IX.1
+- **Nota do aceite (2026-11-17)**: implementado no Legado (T09 a T12) e consumido pelo Keycloak (SPI de migração,
+  ADR-0006 do `keycloak`), que usa verificação, consulta e marcação com a chave `keycloak-1`, só por HTTPS com a CA deste Legado
+  (`secrets/internal/ca.crt`), timeout de 2 s e sem retry. O conteúdo da decisão não mudou.
 
 ## Contexto
 

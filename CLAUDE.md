@@ -49,6 +49,12 @@ docker-compose.yml sqlserver -> migrator -> api -> web
   HMAC com nonce, janela de 60 s e anti-reenvio; permissão por chamador (`keycloak`/`cadastro`); login, senha e
   assinatura nunca em log; usuário inexistente gasta o mesmo tempo que senha errada. Cobertas por
   `tests/Legado.Api.IntegrationTests/Internal/`. Credenciais locais: `scripts/internal-credentials.sh` (`secrets/`).
+- Ordem e comandos com o Keycloak/Cadastro: `./scripts/identity-network.sh` → `./scripts/internal-credentials.sh` →
+  `docker compose -f docker-compose.yml -f docker-compose.identity.yml [-f docker-compose.graylog.yml] up -d --build`
+  (README, "Ordem para subir com o Keycloak e o Cadastro"). O Keycloak lê `LEGADO_INTERNAL_KEYCLOAK_KEY` daqui como
+  `KC_LEGADO_SIGNING_KEY` e monta `secrets/internal/ca.crt`; o ADR-0005 está **aceito**. Os chamadores só podem usar
+  TLS com a CA deste Legado (nunca `http://`, nunca outra CA); mudar o contrato (rota, assinatura, permissões) exige
+  nova versão e ajuste nos testes do Keycloak e do Cadastro, que usam os vetores de `Internal/hmac-test-vectors.json`.
 - Imagens Docker fixadas por **tag + digest**: atualize os dois juntos.
 - Testes .NET: xUnit v3 no **Microsoft.Testing.Platform** (`global.json`) e cobertura via
   `Microsoft.Testing.Extensions.CodeCoverage`.

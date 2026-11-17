@@ -238,3 +238,30 @@ docker compose -f docker-compose.yml -f docker-compose.identity.yml up -d --buil
 - Conta já migrada (`MigratedAt` preenchido) que entra com a senha certa vê o aviso e é levada ao Cadastro em 5 s
   (`CADASTRO_URL`, padrão `http://localhost:4300/`). O autocadastro do Legado continua aberto.
   E2E desse modo: `E2E_MIGRATED_LOGIN=<conta migrada> E2E_MIGRATED_PASSWORD=<senha> ./scripts/e2e.sh`.
+
+#### Ordem para subir com o Keycloak e o Cadastro
+
+O Legado sobe **sozinho**, sem nenhum dos dois (a API interna é opcional e nada aqui depende deles). Para a migração:
+
+1. `./scripts/identity-network.sh` e, com o `.env` preenchido, `./scripts/internal-credentials.sh`.
+2. `docker compose -f docker-compose.yml -f docker-compose.identity.yml [-f docker-compose.graylog.yml] up -d --build`
+   (com o Graylog no ar, inclua o override dele).
+3. Só então o `../keycloak`: ele monta `secrets/internal/ca.crt` daqui e precisa da chave
+   `LEGADO_INTERNAL_KEYCLOAK_KEY`, que é copiada para `KC_LEGADO_SIGNING_KEY` no `.env` do Keycloak sem exibir o valor
+   (comando no README do `../keycloak`, seção "Migração dos usuários do Legado"). A `LEGADO_INTERNAL_CADASTRO_KEY` é
+   a do Cadastro.
+4. Depois, o `../cadastro` (`http://localhost:4300`). Trocou o `.env` ou a CA? Recrie os containers dependentes.
+
+Quem consome: o Keycloak (verificação de credenciais, consulta e marcação) e o Cadastro (checagem de existência),
+cada um com a própria chave HMAC. Decisão: [ADR-0005](docs/adr/0005-api-interna-de-migracao-para-keycloak.md) (aceito).
+
+#### E2E da migração
+
+A migração é exercitada pelo E2E do `../cadastro` (`./scripts/e2e.sh`), que cria contas descartáveis `e2e.*` pelo
+cadastro do Legado, entra pelo Cadastro e confere nos logs desta API que o 2º login não consulta o Legado. O Legado
+**não tem exclusão**: essas contas ficam no banco. O Legado limita login e cadastro a 10 chamadas por minuto por IP
+(`RateLimiting:CredentialsPermitsPerMinute`), e o E2E se mantém abaixo disso.
+
+Limitação conhecida: no `../keycloak`, nunca rode dois provisioners ou smokes ao mesmo tempo (falha intermitente
+`Parent flow doesn't exist` ou JSON inválido; causa não comprovada). Isso vale também ao rodar o E2E do Cadastro
+enquanto o provisionamento do Keycloak ainda não terminou.

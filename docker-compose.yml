@@ -6,9 +6,13 @@ services:
   sqlserver:
     # SQL Server 2025 (17.0.5035.5) fixado por digest (OWASP A03); atualize junto com o legado-database/Dockerfile.
     image: mcr.microsoft.com/mssql/server:2025-latest@sha256:05644dad1266ca3d445d1e8f6d2ebb9a6a03df9a39376e0f7b48917356dca9d9
+    # Teto de memória: um serviço não derruba os demais na VM do WSL2 (20 GB, ver ~/.wslconfig).
+    mem_limit: 3g
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
+      # Teto do engine abaixo do limite do container; sem isso o SQL Server ocupa a memória toda.
+      MSSQL_MEMORY_LIMIT_MB: "2048"
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?defina MSSQL_SA_PASSWORD no .env}
     ports:
       # Publicado só em localhost, para inspeção com SSMS/Azure Data Studio e para a futura migração.

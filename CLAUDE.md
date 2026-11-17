@@ -64,8 +64,9 @@ docker-compose.yml sqlserver -> migrator -> api -> web
   `Common/Pseudonymization/`): o `PseudonymizationEnricher` troca o campo pela máscara do ADR-0002 (`***.456.789-**`,
   `11*****4321`, `mar***`, `ana***@gmail`) e soma `<Campo>_token` (`k1-` + HMAC-SHA256 truncado; e-mail e login dão
   o mesmo token), em qualquer nível (objeto, dicionário, lista); fora do formato vira `***`, sem token. O texto
-  renderizado sai só com a máscara, nunca com o token. No `Scope` dos escopos o valor é trocado pela máscara (ou `***`),
-  exceto o curto (login < 4 caracteres, CPF/CNPJ/telefone < 8 dígitos), que fica em claro: nunca use dado pessoal em
+  renderizado sai só com a máscara, nunca com o token. No `Scope` dos escopos só o valor com máscara válida é trocado pela
+  máscara, e CPF/CNPJ/telefone fora do formato com 8+ dígitos vira `***`; login/e-mail curto ou inválido não é trocado
+  (o Graylog o troca por `***`): nunca use dado pessoal em
   template de escopo. A exceção não é alterada, então nunca leve dado pessoal nela. O Graylog é só a rede de segurança (ADR-0002 do
   `../graylog`). Os nomes ficam em `PersonalDataFields`, iguais às listas `LGPD_*` do
   `../graylog/provisioning/provision.sh`: nome novo entra nos dois. Regras que **não podem regredir**: vetores do

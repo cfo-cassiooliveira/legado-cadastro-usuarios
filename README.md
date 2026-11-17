@@ -155,8 +155,9 @@ titular com igualdade exata (e-mail e login geram o mesmo token). Vale também d
 dicionários e listas: o campo mascarado é gravado no Graylog como `Customer_Email` e o token vai no topo do evento
 como `Customer_Email_token` (nunca dentro do objeto, para não aparecer no texto), fora da consulta padrão do Cadastro. O texto
 (`message`/`full_message`) sai só com a máscara; valor fora do formato vira `***`, sem token. No texto dos escopos
-(`Scope`, renderizado em claro pelo provider), o valor é trocado pela máscara ou por `***`, exceto o curto (login com
-menos de 4 caracteres; CPF/CNPJ/telefone com menos de 8 dígitos), que fica como está para não corromper palavras: por isso
+(`Scope`, renderizado em claro pelo provider), só o valor com máscara válida é trocado pela máscara, e CPF/CNPJ/telefone fora do
+formato com 8+ dígitos vira `***`; login/e-mail curto ou inválido (de qualquer tamanho, ex.: `@gmail.com`) não é trocado, para não corromper palavras
+(o Graylog, como rede de segurança, o troca por `***`): por isso
 dado pessoal nunca vai em template de escopo. Esses campos e textos não saem da API com o valor em claro (teste com servidor GELF TCP falso em
 `tests/Legado.Api.IntegrationTests/Logging/PseudonymizedGelfTests.cs`). **Não é tratado na origem**: a exceção
 (mensagem e stack trace seguem como estão, por isso nunca devem conter dado pessoal) e nomes de campo fora das listas;

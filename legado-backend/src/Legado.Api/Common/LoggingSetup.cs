@@ -21,8 +21,8 @@ namespace Legado.Api.Common;
 /// objetos destruturados, dicionários e listas (token no topo, fora do texto: <c>Customer_Email_token</c>). Valor fora do formato,
 /// ou objeto/lista no lugar do valor, vira <c>***</c> sem token. O texto (<c>message</c>/<c>full_message</c>) é
 /// renderizado depois, a partir das propriedades já trocadas, e o texto já renderizado dos escopos (<c>Scope</c>)
-/// recebe a troca do valor pela máscara (ou <c>***</c>; login com menos de 4 caracteres não é trocado, para não
-/// corromper palavras). <b>Não é tratado</b>: a exceção (o Serilog
+/// recebe a troca do valor pela máscara válida (ou <c>***</c> para CPF/CNPJ/telefone fora do formato com 8+ dígitos);
+/// login/e-mail curto ou inválido não é trocado, para não corromper palavras. <b>Não é tratado</b>: a exceção (o Serilog
 /// não permite trocá-la, por isso nunca deve conter dado pessoal) e nomes fora das listas, em qualquer texto ou campo;
 /// o pipeline do Graylog continua como rede de segurança.</para>
 /// </remarks>

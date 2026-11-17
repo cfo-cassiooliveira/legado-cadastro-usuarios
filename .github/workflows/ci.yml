@@ -139,6 +139,8 @@ jobs:
         run: |
           cp .env.example .env
           sed -i "s/^MSSQL_SA_PASSWORD=\$/MSSQL_SA_PASSWORD=Sa$(openssl rand -hex 12)#1/; s/^APP_DB_PASSWORD=\$/APP_DB_PASSWORD=App$(openssl rand -hex 12)#1/; s/^JWT_SIGNING_KEY=\$/JWT_SIGNING_KEY=$(openssl rand -hex 48)/; s/^SEED_ENABLED=true\$/SEED_ENABLED=false/" .env
+          # Base64 tem "/": delimitador "|" no sed.
+          sed -i "s|^LOG_PSEUDONYMIZATION_KEY_K1=\$|LOG_PSEUDONYMIZATION_KEY_K1=$(openssl rand -base64 32)|" .env
       - name: Build e subida da stack (banco -> migrator -> api -> web)
         run: docker compose up -d --build --wait
       - name: Trivy nas imagens (HIGH/CRITICAL com correção; exceções com prazo no .trivyignore.yaml)

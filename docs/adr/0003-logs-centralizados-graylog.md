@@ -4,6 +4,8 @@
 - **Data**: 2026-11-09
 - **Decisores**: Cassio Oliveira (responsável técnico)
 - **Artigos da Constituição relacionados**: Art. VI.1, VI.2 e VI.3 (observabilidade), Art. IV.6 (dados pessoais fora dos logs)
+- **Complementado por**: ADR-0003 do projeto graylog (`../graylog/docs/adr/0003-pseudonimizacao-hmac-pesquisavel.md`), pseudonimização
+  dos dados pessoais na origem: máscara + `<Campo>_token` (HMAC) gerados pela API antes do envio (item 5).
 
 ## Contexto
 
@@ -29,11 +31,15 @@ ricos de **todos** os serviços, sem passar a depender dele para rodar.
    revogação, token recusado (fingerprint ou sessão) e rate limit excedido.
 5. **Nunca nos logs**: senha, token, fingerprint, cookie, `Authorization`, query string, corpo de requisição,
    e-mail, nome, celular e IP do cliente. Isso é garantido por teste de integração que inspeciona os eventos
-   reais. O Graylog ainda mascara e-mail e CPF como defesa em profundidade.
+   reais. Dado pessoal aprovado em ADR vai só como campo estruturado com o nome do tipo e sai
+   pseudonimizado pela própria API (máscara + `<Campo>_token`, ADR-0003 do graylog); o Graylog mascara o que escapar,
+   como defesa em profundidade.
 6. **Logs do navegador**: o frontend envia eventos (erros JS via `ErrorHandler` global, falhas capturadas e operações
    concluídas) para `POST /api/v1/client-logs`, que é anônimo porque falhas ocorrem antes do login. O endpoint
    valida nível e evento por lista fechada e padrão, limita tamanhos, remove caracteres de controle (log injection),
-   mascara e-mail/CPF e tem rate limit próprio. Os eventos vão para o stream `Legado - Navegador`.
+   tira query string e fragmento da origem, troca e-mail, CNPJ formatado, CPF e celular com DDD reconhecidos pelo
+   formato na mensagem, na origem e no stack pela máscara do ADR-0002 do `../graylog` (sem token: texto livre) e tem
+   rate limit próprio. Os eventos vão para o stream `Legado - Navegador`.
 7. **Níveis** seguem a regra do workspace (`observability.md`): exceção capturada = Error; falha de negócio ou falha
    prevista de banco (unicidade no insert, concorrência no update) = Warning com resultado tratado (409); sucesso =
    Information.

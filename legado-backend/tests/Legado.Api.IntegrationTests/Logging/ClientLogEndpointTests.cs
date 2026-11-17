@@ -1,6 +1,11 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.RegularExpressions;
+using Legado.Api.Common.Pseudonymization;
 using Legado.Api.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog.Events;
 
 namespace Legado.Api.IntegrationTests.Logging;
@@ -48,7 +53,102 @@ public sealed class ClientLogEndpointTests(LegadoApiFactory factory)
         message.ShouldNotContain("\r");
         message.ShouldNotContain("ana@exemplo.com");
         message.ShouldNotContain("123.456.789-09");
-        message.ShouldContain("***@***");
+        message.ShouldContain("a***@exemplo"); // Parte local com até 3 caracteres mostra só 1 (ADR-0002).
+        message.ShouldContain("***.456.789-**");
+    }
+
+    [Theory]
+    [InlineData("ana.souza@gmail.com", "ana***@gmail")]
+    [InlineData("123.456.789-09", "***.456.789-**")]
+    [InlineData("+55 (11) 98765-4321", "11*****4321")]
+    public async Task PersonalData_InMessageStackAndSource_IsLoggedOnlyWithAdr0002Mask(string value, string mask)
+    {
+        var correlation = NewId();
+
+        await PostAsync(new
+        {
+            level = "error",
+            @event = "app.unhandled_error",
+            message = $"Error: falhou para {value}",
+            source = $"/users/{value}/profile",
+            stack = $"Error: falhou para {value}\n    at main.js:1:2",
+        }, correlation);
+
+        var logged = ClientEvent(correlation);
+        string[] texts =
+        [
+            CollectingLogSink.Scalar(logged.Properties["ClientMessage"])!,
+            CollectingLogSink.Scalar(logged.Properties["ClientSource"])!,
+            CollectingLogSink.Scalar(logged.Properties["ClientStack"])!,
+            logged.RenderMessage(CultureInfo.InvariantCulture),
+        ];
+        texts.ShouldAllBe(text => !text.Contains(value) && text.Contains(mask));
+    }
+
+
+    [Theory]
+    [InlineData("a", 5000)]
+    [InlineData("a.", 5000)]
+    [InlineData("%40", 3000)]
+    [InlineData("a@a.", 3000)]
+    [InlineData("1", 5000)]
+    [InlineData("1.", 5000)]
+    public async Task PathologicalText_IsAcceptedWithoutServerError(string unit, int repeat)
+    {
+        var correlation = NewId();
+
+        var response = await PostAsync(new
+        {
+            level = "error",
+            @event = "app.unhandled_error",
+            message = string.Concat(Enumerable.Repeat(unit, repeat)),
+            source = string.Concat(Enumerable.Repeat(unit, repeat)),
+            stack = string.Concat(Enumerable.Repeat(unit, repeat)),
+        }, correlation);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        ClientEvent(correlation).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task MaskingTimeout_RedactsFieldsAndLogsWarningWithoutOriginalText()
+    {
+        var correlation = NewId();
+        const string secret = "ana.souza@gmail.com";
+        using var failing = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddSingleton(new PersonalDataTextMask(_ => throw new RegexMatchTimeoutException()))));
+        using var request = new HttpRequestMessage(HttpMethod.Post, Route)
+        {
+            Content = JsonContent.Create(new { level = "error", @event = "app.unhandled_error", message = secret, source = secret, stack = secret }),
+        };
+        request.Headers.Add("X-Correlation-Id", correlation);
+
+        var response = await failing.CreateClient().SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        var logged = ClientEvent(correlation);
+        CollectingLogSink.Scalar(logged.Properties["ClientMessage"]).ShouldBe("***");
+        CollectingLogSink.Scalar(logged.Properties["ClientSource"]).ShouldBe("***");
+        CollectingLogSink.Scalar(logged.Properties["ClientStack"]).ShouldBe("***");
+        var warnings = factory.Logs.WithProperty("correlation_id", correlation)
+            .Where(e => e.Level == LogEventLevel.Warning && e.MessageTemplate.Text.Contains("masking timed out", StringComparison.Ordinal)).ToList();
+        warnings.Count.ShouldBe(3);
+        warnings.ShouldAllBe(e => !e.RenderMessage(CultureInfo.InvariantCulture).Contains("ana"));
+    }
+    [Fact]
+    public async Task Source_DropsQueryStringAndFragment_AndMasksEncodedEmail()
+    {
+        var correlation = NewId();
+
+        await PostAsync(new
+        {
+            level = "warning",
+            @event = "auth.sign_in_rejected",
+            message = "x",
+            source = "/users/ana.souza%40gmail.com?cpf=12345678909&login=maria.silva#phone=11987654321",
+        }, correlation);
+
+        CollectingLogSink.Scalar(ClientEvent(correlation).Properties["ClientSource"]).ShouldBe("/users/ana***@gmail");
     }
 
     [Fact]

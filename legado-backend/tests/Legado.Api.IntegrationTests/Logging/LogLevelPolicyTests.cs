@@ -25,8 +25,8 @@ public sealed class LogLevelPolicyTests(LegadoApiFactory factory)
         await SendAsync(client, HttpMethod.Post, "/api/v1/users", TestUsers.NewRegistration(userName), registerCorrelation, ct);
         await SendAsync(client, HttpMethod.Post, "/api/v1/auth/login", new { userName, password = TestUsers.Password }, loginCorrelation, ct);
 
-        Single(registerCorrelation, "User {UserId} registered").Level.ShouldBe(LogEventLevel.Information);
-        Single(loginCorrelation, "User {UserId} signed in").Level.ShouldBe(LogEventLevel.Information);
+        Single(registerCorrelation, "User {UserId} registered (user name {UserName}, email {Email}, mobile phone {MobilePhone})").Level.ShouldBe(LogEventLevel.Information);
+        Single(loginCorrelation, "User {UserId} signed in (user name {UserName})").Level.ShouldBe(LogEventLevel.Information);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public sealed class LogLevelPolicyTests(LegadoApiFactory factory)
             await SendAsync(client, HttpMethod.Post, "/api/v1/auth/login", new { userName, password = "Errada@123" }, correlation, ct);
         }
 
-        Single(correlations[0], "Sign-in failed: invalid credentials (known user id: {UserId})").Level.ShouldBe(LogEventLevel.Warning);
-        Single(correlations[^1], "Sign-in rejected: user {UserId} is locked out").Level.ShouldBe(LogEventLevel.Warning);
+        Single(correlations[0], "Sign-in failed: invalid credentials (user name {UserName}, known user id: {UserId})").Level.ShouldBe(LogEventLevel.Warning);
+        Single(correlations[^1], "Sign-in rejected: user {UserId} is locked out (user name {UserName})").Level.ShouldBe(LogEventLevel.Warning);
     }
 
     [Fact]

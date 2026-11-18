@@ -58,7 +58,8 @@ internal sealed partial class RegisterUserHandler(
         var result = await RegisterAsync(command, cancellationToken);
         if (result.IsSuccess)
         {
-            LogUserRegistered(result.Value);
+            // Só no sucesso (valores já validados); o enricher os troca por máscara + token (LGPD).
+            LogUserRegistered(result.Value, command.UserName, command.Email, command.MobilePhone);
         }
         else
         {
@@ -139,8 +140,9 @@ internal sealed partial class RegisterUserHandler(
         return null;
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} registered")]
-    private partial void LogUserRegistered(Guid userId);
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "User {UserId} registered (user name {UserName}, email {Email}, mobile phone {MobilePhone})")]
+    private partial void LogUserRegistered(Guid userId, string? userName, string? email, string? mobilePhone);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "User registration rejected: {ErrorCodes}")]
     private partial void LogRegistrationRejected(string errorCodes);

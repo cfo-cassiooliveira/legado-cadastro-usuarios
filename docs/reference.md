@@ -17,6 +17,7 @@
   `Logging/PseudonymizedGelfTests.cs`); sem chave `Logging:Pseudonymization:Keys:<CurrentKeyId>` válida a API não
   sobe (chave vazia = ausente). Chave só em `.env`/user-secrets (`scripts/log-pseudonymization-key.sh [kN]`), a mesma
   do `../cadastro`; o compose mapeia k1 e k2 (rotação: k2 + `LOG_PSEUDONYMIZATION_CURRENT_KEY_ID=k2`, depois a K1 sai).
+- Pontos reais que logam dado pessoal (só pelo enricher, máscara + `*_token`): login ok e falhas (inválido/inexistente/bloqueado/migrado) com `{UserName}` (o valor digitado também no usuário inexistente; fora do formato vira `***` sem token) e cadastro ok com `{UserName}`, `{Email}`, `{MobilePhone}`. Cadastro rejeitado loga só `{ErrorCodes}`; a resposta ao cliente segue genérica. Testes: `Logging/PersonalDataLogFlowTests.cs` (fluxo real, GELF e contrato dos nomes em `PersonalDataFields`).
 - Níveis (regra em `observability.md`): exceção capturada = Error; falha de negócio ou falha prevista de banco
   (unicidade/concorrência) = Warning + resultado tratado; sucesso = Information. Frontend usa `AppLogger`
   (`POST /api/v1/client-logs`) e o `GlobalErrorHandler`; todo catch passa pelo logger. O endpoint tira query string e

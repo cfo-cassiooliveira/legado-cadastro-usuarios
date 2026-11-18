@@ -57,6 +57,12 @@ services:
       Logging__Pseudonymization__CurrentKeyId: ${LOG_PSEUDONYMIZATION_CURRENT_KEY_ID:-k1}
       Logging__Pseudonymization__Keys__k1: ${LOG_PSEUDONYMIZATION_KEY_K1:-}
       Logging__Pseudonymization__Keys__k2: ${LOG_PSEUDONYMIZATION_KEY_K2:-}
+    networks:
+      default:
+        # Alias único e estável na rede do projeto: o `api` também existe no cadastro_default e o nome do container
+        # (legado-api-1) muda com projeto/escala. Usado pelo blackbox do ../grafana (ADR-0003 do grafana).
+        aliases:
+          - legado-api
     # Sem "ports": a API só é acessível pela rede interna, via nginx do frontend.
     depends_on:
       migrator:

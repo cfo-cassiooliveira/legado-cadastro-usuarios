@@ -110,7 +110,7 @@ public sealed partial class PseudonymizedGelfTests(LegadoApiFactory factory)
         raw.ShouldContain("Signup of ana***@gmail with ***.456.789-**");
     }
 
-    // Regra do CLAUDE.md: o texto renderizado sai só com a máscara, nunca com o token, também com {@Obj}.
+    // Regra de docs/reference.md: o texto renderizado sai só com a máscara, nunca com o token, também com {@Obj}.
     [Fact]
     public async Task GelfMessage_WithDestructuredObject_RendersMaskWithoutTokenInText()
     {

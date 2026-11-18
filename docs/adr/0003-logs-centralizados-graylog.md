@@ -29,7 +29,7 @@ ricos de **todos** os serviços, sem passar a depender dele para rodar.
    `request_time`, `upstream_time`, `user_agent`), repassando `X-Request-Id` à API para cruzar as duas fontes.
 4. **Eventos de segurança** (stream e alertas no Graylog): login com sucesso, falha e bloqueio, logout com
    revogação, token recusado (fingerprint ou sessão) e rate limit excedido.
-5. **Nunca nos logs**: senha, token, fingerprint, e-mail, login, nome e celular (testados); IP, `Authorization` e corpo não são logados por desenho, sem teste dedicado. Os testes de integração inspecionam os eventos reais. Dado pessoal aprovado em ADR vai só como campo estruturado com o nome do tipo e sai
+5. **Nunca nos logs**: senha, token, fingerprint, e-mail, login, nome e celular (testados); IP do cliente, `Authorization` e corpo de requisição também não (`StructuredLoggingTests.Logs_NeverContainClientIpAuthorizationHeaderOrRequestBody`); login, senha e assinatura das chamadas internas idem (`InternalEndpointsTests.InternalCalls_NeverLogLoginPasswordOrSignature`). Os testes de integração inspecionam os eventos reais. Dado pessoal aprovado em ADR vai só como campo estruturado com o nome do tipo e sai
    pseudonimizado pela própria API (máscara + `<Campo>_token`, ADR-0003 do graylog); o Graylog mascara o que escapar,
    como defesa em profundidade.
 6. **Logs do navegador**: o frontend envia eventos (erros JS via `ErrorHandler` global, falhas capturadas e operações

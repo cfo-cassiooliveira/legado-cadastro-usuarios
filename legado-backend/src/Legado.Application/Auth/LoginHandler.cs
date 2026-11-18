@@ -45,39 +45,42 @@ internal sealed partial class LoginHandler(
             return Result.Failure<AccessToken>(InvalidCredentials);
         }
 
-        var verification = await credentialVerifier.VerifyAsync(command.UserName.Trim(), command.Password, cancellationToken);
+        var userName = command.UserName.Trim();
+        var verification = await credentialVerifier.VerifyAsync(userName, command.Password, cancellationToken);
 
         switch (verification)
         {
             case { Status: CredentialStatus.Valid, User: { } user }:
                 var token = tokenIssuer.Issue(user);
-                LogSignedIn(user.Id);
+                LogSignedIn(user.Id, userName);
                 return Result.Success(token);
 
             case { Status: CredentialStatus.Migrated }:
-                LogMigrated(verification.UserId);
+                LogMigrated(verification.UserId, userName);
                 return Result.Failure<AccessToken>(AccountMigrated);
 
             case { Status: CredentialStatus.LockedOut }:
-                LogLockedOut(verification.UserId);
+                LogLockedOut(verification.UserId, userName);
                 return Result.Failure<AccessToken>(InvalidCredentials);
 
             default:
-                LogInvalidCredentials(verification.UserId);
+                LogInvalidCredentials(userName, verification.UserId);
                 return Result.Failure<AccessToken>(InvalidCredentials);
         }
     }
 
-    // Eventos de autenticação são logados para auditoria (OWASP A09), sem login/senha (LGPD).
-    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} signed in")]
-    private partial void LogSignedIn(Guid userId);
+    // Eventos de autenticação são logados para auditoria (OWASP A09), nunca com a senha. O login entra só como campo
+    // estruturado {UserName} (nome exato de PersonalDataFields): o PseudonymizationEnricher o troca por máscara + token
+    // (LGPD). No login inexistente o valor digitado também passa pelo enricher (fora de formato vira "***").
+    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} signed in (user name {UserName})")]
+    private partial void LogSignedIn(Guid userId, string userName);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in rejected: user {UserId} was migrated to Keycloak")]
-    private partial void LogMigrated(Guid? userId);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in rejected: user {UserId} was migrated to Keycloak (user name {UserName})")]
+    private partial void LogMigrated(Guid? userId, string userName);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in rejected: user {UserId} is locked out")]
-    private partial void LogLockedOut(Guid? userId);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in rejected: user {UserId} is locked out (user name {UserName})")]
+    private partial void LogLockedOut(Guid? userId, string userName);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in failed: invalid credentials (known user id: {UserId})")]
-    private partial void LogInvalidCredentials(Guid? userId);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sign-in failed: invalid credentials (user name {UserName}, known user id: {UserId})")]
+    private partial void LogInvalidCredentials(string userName, Guid? userId);
 }

@@ -17,6 +17,7 @@
   `Logging/PseudonymizedGelfTests.cs`); sem chave `Logging:Pseudonymization:Keys:<CurrentKeyId>` válida a API não
   sobe (chave vazia = ausente). Chave só em `.env`/user-secrets (`scripts/log-pseudonymization-key.sh [kN]`), a mesma
   do `../cadastro`; o compose mapeia k1 e k2 (rotação: k2 + `LOG_PSEUDONYMIZATION_CURRENT_KEY_ID=k2`, depois a K1 sai).
+- Pontos reais que logam dado pessoal (só pelo enricher, máscara + `*_token`): login ok e falhas (inválido/inexistente/bloqueado/migrado) com `{UserName}` (o valor digitado também no usuário inexistente; fora do formato vira `***` sem token) e cadastro ok com `{UserName}`, `{Email}`, `{MobilePhone}`. Cadastro rejeitado loga só `{ErrorCodes}`; a resposta ao cliente segue genérica. Testes: `Logging/PersonalDataLogFlowTests.cs` (fluxo real, GELF e contrato dos nomes em `PersonalDataFields`).
 - Níveis (regra em `observability.md`): exceção capturada = Error; falha de negócio ou falha prevista de banco
   (unicidade/concorrência) = Warning + resultado tratado; sucesso = Information. Frontend usa `AppLogger`
   (`POST /api/v1/client-logs`) e o `GlobalErrorHandler`; todo catch passa pelo logger. O endpoint tira query string e
@@ -30,8 +31,8 @@
 - Autenticação: **própria** (Identity + JWT HS256), por exceção do **ADR-0001**. Não use como referência.
   Regras que **não podem regredir**: token exige o cookie `__Host-legado-fgp` (fingerprint), sessão validada
   no servidor a cada request (`sstamp`/bloqueio), logout revoga no servidor, token sem dado pessoal, nada em
-  `localStorage`/`sessionStorage`, CSP sem `unsafe-inline` e com Trusted Types (verificado em
-  `security-headers.conf`, sem teste dedicado). Os testes em `tests/Legado.Api.IntegrationTests/Security/` garantem o restante.
+  `localStorage`/`sessionStorage`, CSP sem `unsafe-inline` e com Trusted Types (garantido por
+  `Security/ContentSecurityPolicyTests`, que lê `security-headers.conf`). Os testes em `tests/Legado.Api.IntegrationTests/Security/` garantem o restante.
 - API interna de migração (ADR-0005), regras que **não podem regredir**: desligada por padrão (o Legado nunca
   depende do Keycloak nem do Cadastro); só na porta HTTPS interna (8443), nunca na pública nem no nginx; assinatura
   HMAC com nonce, janela de 60 s e anti-reenvio; permissão por chamador (`keycloak`/`cadastro`); assinatura nunca em log; usuário inexistente gasta o mesmo tempo que senha errada. Cobertas por

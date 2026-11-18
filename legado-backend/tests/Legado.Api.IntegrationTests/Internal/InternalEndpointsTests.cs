@@ -209,6 +209,38 @@ public sealed class InternalEndpointsTests(LegadoApiFactory factory) : IAsyncLif
         rejected.ShouldAllBe(e => !CollectingLogSink.FullText(e).Contains("v1=", StringComparison.Ordinal));
     }
 
+    // Login e senha chegam no corpo e a assinatura no header: nenhum dos três pode aparecer em log, nem em sucesso nem em rejeição.
+    [Fact]
+    public async Task InternalCalls_NeverLogLoginPasswordOrSignature()
+    {
+        var marker = Guid.NewGuid().ToString("N")[..10];
+        var login = $"login.{marker}";
+        var password = $"Senha@{marker}";
+        var otherLogin = $"outro.{marker}";
+        var signatures = new List<string>();
+        void Capture(HttpRequestMessage request) =>
+            signatures.Add(request.Headers.GetValues(HmacSignature.HeaderName).Single().Split("v1=", 2)[1]);
+
+        using var verify = await _internal.SendAsync(HttpMethod.Post, Verify, new { login, password }, tamper: Capture);
+        using var lookup = await _internal.SendAsync(HttpMethod.Post, Lookup, new { login }, tamper: Capture);
+        // Rejeitada: a assinatura vale para outro corpo; é o caso que gera log de segurança.
+        using var rejected = await _internal.SendAsync(HttpMethod.Post, Lookup, new { login },
+            tamper: request =>
+            {
+                Capture(request);
+                request.Content = new StringContent($"{{\"login\":\"{otherLogin}\"}}", System.Text.Encoding.UTF8, "application/json");
+            });
+
+        rejected.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        signatures.Count.ShouldBe(3);
+        var allLogText = string.Join("\n", factory.Logs.Events.Select(CollectingLogSink.FullText));
+        allLogText.ShouldContain("Internal API signature rejected", Case.Sensitive, "a rejeição precisa ter sido logada para o teste ter valor");
+        foreach (var secret in new[] { login, password, otherLogin }.Concat(signatures))
+        {
+            allLogText.ShouldNotContain(secret, Case.Insensitive, $"o log não pode conter '{secret}'");
+        }
+    }
+
     [Fact]
     public async Task Signature_ReplayedNonce_IsRejected()
     {

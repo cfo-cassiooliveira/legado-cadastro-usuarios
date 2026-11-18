@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Legado.Api.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Hosting;
 using Serilog.Events;
 
 namespace Legado.Api.IntegrationTests.Logging;
@@ -93,6 +94,45 @@ public sealed class StructuredLoggingTests(LegadoApiFactory factory)
         };
         var allLogText = string.Join("\n", factory.Logs.Events.Select(CollectingLogSink.FullText));
         foreach (var secret in forbidden)
+        {
+            allLogText.ShouldNotContain(secret, Case.Insensitive, $"o log não pode conter '{secret}'");
+        }
+    }
+
+    // O IP é a chave do rate limit (RateLimitPolicies), então passa pela requisição; ainda assim não pode ir ao log (LGPD).
+    // O TestServer não tem IP remoto: o X-Forwarded-For (confiado na Program.cs, atrás do nginx) define o RemoteIpAddress.
+    [Fact]
+    public async Task Logs_NeverContainClientIpAuthorizationHeaderOrRequestBody()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string clientIp = "203.0.113.77";
+        var marker = Guid.NewGuid().ToString("N")[..10];
+        var token = $"token-reconhecivel-{marker}";
+        var bodyPassword = $"Corpo@{marker}";
+        var bodyUser = $"corpo.{marker}";
+
+        // Limite de 1 por janela: a 1a requisição passa (401) e as seguintes são rejeitadas (429) pelo limiter por IP.
+        using var limited = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("RateLimiting:CredentialsPermitsPerMinute", "1"));
+        var client = limited.CreateClient();
+        var statuses = new List<HttpStatusCode>();
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            {
+                Content = JsonContent.Create(new { userName = bodyUser, password = bodyPassword }),
+            };
+            request.Headers.Add("X-Forwarded-For", clientIp);
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+            using var response = await client.SendAsync(request, ct);
+            statuses.Add(response.StatusCode);
+        }
+
+        statuses[0].ShouldBe(HttpStatusCode.Unauthorized);
+        statuses[2].ShouldBe(HttpStatusCode.TooManyRequests);
+        var allLogText = string.Join("\n", factory.Logs.Events.Select(CollectingLogSink.FullText));
+        allLogText.ShouldContain("Rate limit exceeded", Case.Sensitive, "o limiter precisa ter rejeitado a requisição");
+        foreach (var secret in new[] { clientIp, token, bodyPassword, bodyUser })
         {
             allLogText.ShouldNotContain(secret, Case.Insensitive, $"o log não pode conter '{secret}'");
         }

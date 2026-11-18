@@ -30,8 +30,8 @@
 - Autenticação: **própria** (Identity + JWT HS256), por exceção do **ADR-0001**. Não use como referência.
   Regras que **não podem regredir**: token exige o cookie `__Host-legado-fgp` (fingerprint), sessão validada
   no servidor a cada request (`sstamp`/bloqueio), logout revoga no servidor, token sem dado pessoal, nada em
-  `localStorage`/`sessionStorage`, CSP sem `unsafe-inline` e com Trusted Types (verificado em
-  `security-headers.conf`, sem teste dedicado). Os testes em `tests/Legado.Api.IntegrationTests/Security/` garantem o restante.
+  `localStorage`/`sessionStorage`, CSP sem `unsafe-inline` e com Trusted Types (garantido por
+  `Security/ContentSecurityPolicyTests`, que lê `security-headers.conf`). Os testes em `tests/Legado.Api.IntegrationTests/Security/` garantem o restante.
 - API interna de migração (ADR-0005), regras que **não podem regredir**: desligada por padrão (o Legado nunca
   depende do Keycloak nem do Cadastro); só na porta HTTPS interna (8443), nunca na pública nem no nginx; assinatura
   HMAC com nonce, janela de 60 s e anti-reenvio; permissão por chamador (`keycloak`/`cadastro`); assinatura nunca em log; usuário inexistente gasta o mesmo tempo que senha errada. Cobertas por

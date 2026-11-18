@@ -7,7 +7,7 @@ using Serilog.Parsing;
 namespace Legado.Api.IntegrationTests.Logging;
 
 /// <summary>
-/// Pseudonimização na origem (ADR-0003 do graylog): vetores obrigatórios do plan.md da spec 001, canônicos, máscaras
+/// Pseudonimização na origem (ADR-0003 do graylog): vetores obrigatórios do plan.md §2 da spec 001 do graylog, canônicos, máscaras
 /// do ADR-0002, valores fora do formato, e-mail = login, rotação de chave e o enricher (sem subir a API).
 /// </summary>
 public sealed class PseudonymizationTests

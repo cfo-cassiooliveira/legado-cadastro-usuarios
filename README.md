@@ -144,8 +144,7 @@ em massa, rate limit, API lenta e 5xx no nginx.
 No frontend, o `AppLogger` envia cada evento para a API (só código do evento, tela e status, nunca valores
 digitados ou URLs). Os testes de backend e frontend verificam o nível de cada um desses cenários.
 
-**O que nunca vai para os logs**: senha, token, fingerprint, cookie, `Authorization`, query string, corpo de
-requisição, e-mail, nome, celular e IP. Isso é garantido por teste de integração que inspeciona os eventos reais.
+**O que nunca vai para os logs**: senha, token, fingerprint, e-mail, login, nome e celular (testados); IP, `Authorization` e corpo não são logados por desenho, sem teste dedicado. Os testes de integração inspecionam os eventos reais.
 
 **Dado pessoal aprovado em ADR** (CPF, CNPJ, telefone, login, e-mail) só vai como campo estruturado com o nome do tipo
 (`{Cpf}`, `{Cnpj}`, `{Phone}`/`{MobilePhone}`, `{UserName}`, `{Email}`) e é **pseudonimizado na origem**

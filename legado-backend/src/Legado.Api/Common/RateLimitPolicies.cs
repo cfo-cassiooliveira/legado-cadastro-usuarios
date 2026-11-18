@@ -45,7 +45,7 @@ internal static partial class RateLimitPolicies
             var logger = loggerFactory.CreateLogger(LoggerCategory);
             options.OnRejected = (context, _) =>
             {
-                LogRejected(logger, context.HttpContext.Request.Path.Value ?? string.Empty);
+                LogRejected(logger, RequestPathSanitizer.Sanitize(context.HttpContext));
                 return ValueTask.CompletedTask;
             };
         });

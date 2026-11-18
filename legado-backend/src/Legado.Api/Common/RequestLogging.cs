@@ -7,7 +7,7 @@ namespace Legado.Api.Common;
 
 /// <summary>
 /// Log de requisição único e rico por chamada HTTP (método, rota, status, latência, endpoint, usuário, ids de
-/// correlação). Nunca registra corpo, query string, headers de autenticação ou cookies.
+/// correlação). Nunca registra o valor da rota (só o padrão), corpo, query string, headers de autenticação ou cookies.
 /// </summary>
 internal static class RequestLogging
 {
@@ -30,6 +30,7 @@ internal static class RequestLogging
             options.Logger = hostLogger;
             options.GetLevel = GetLevel;
             options.EnrichDiagnosticContext = Enrich;
+            options.GetMessageTemplateProperties = GetTemplateProperties;
         });
     }
 
@@ -53,6 +54,22 @@ internal static class RequestLogging
         }
 
         return elapsedMs > SlowRequestThresholdMs ? LogEventLevel.Warning : LogEventLevel.Information;
+    }
+
+    /// <summary>
+    /// Mesmas propriedades do template padrão do Serilog, mas com <c>RequestPath</c> sem dado pessoal
+    /// (<see cref="RequestPathSanitizer"/>): o valor cru da rota nunca chega ao log.
+    /// </summary>
+    public static IEnumerable<LogEventProperty> GetTemplateProperties(HttpContext context, string path, double elapsedMs, int statusCode)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        return
+        [
+            new LogEventProperty("RequestMethod", new ScalarValue(context.Request.Method)),
+            new LogEventProperty("RequestPath", new ScalarValue(RequestPathSanitizer.Sanitize(context))),
+            new LogEventProperty("StatusCode", new ScalarValue(statusCode)),
+            new LogEventProperty("Elapsed", new ScalarValue(elapsedMs)),
+        ];
     }
 
     /// <summary>Acrescenta ao evento de requisição os dados que não fazem parte do template padrão.</summary>

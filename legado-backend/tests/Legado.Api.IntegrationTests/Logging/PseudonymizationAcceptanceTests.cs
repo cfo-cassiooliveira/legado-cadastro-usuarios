@@ -18,7 +18,7 @@ namespace Legado.Api.IntegrationTests.Logging;
 [Collection(ApiTestGroup.Name)]
 public sealed partial class PseudonymizationAcceptanceTests(LegadoApiFactory factory)
 {
-    // Chave dos vetores do plan.md (bytes 00 01 02 … 1f): pública por definição.
+    // Chave dos vetores do plan.md §2 da spec 001 do graylog (bytes 00 01 02 … 1f): pública por definição.
     private const string VectorKey = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
     private const string CpfVectorToken = "k1-b81c27bb5f38080e6ca0ed38b828f262";
     private static readonly TimeSpan GelfTimeout = TimeSpan.FromSeconds(15);

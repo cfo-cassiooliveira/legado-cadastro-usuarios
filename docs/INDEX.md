@@ -15,4 +15,4 @@ Comandos (detalhes no `CLAUDE.md`, seção Comandos):
 Onde procurar:
 - Regras, stack, comandos: `CLAUDE.md`
 - Logs, LGPD, pseudonimização, níveis: `docs/reference.md`
-- Subir com Keycloak/Cadastro: `README.md`
+- Subir com Keycloak/Cadastro: `README.md`; rede de dados e esquema import: `docs/reference.md`

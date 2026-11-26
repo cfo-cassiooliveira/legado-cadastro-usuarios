@@ -1,0 +1,18 @@
+# Integração opcional com o Cadastro (importação de usuários): coloca o SQL Server do Legado na rede Docker compartilhada
+# "workspace-data", onde o Cadastro acessa só o esquema import (logins cadastro_migrator/cadastro_app). Sem este arquivo
+# o Legado sobe sozinho. A porta 1433 continua publicada apenas em 127.0.0.1 (docker-compose.yml); nada é publicado aqui.
+# Pré-requisitos (idempotentes): ./scripts/data-network.sh && ./scripts/internal-credentials.sh
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.data.yml up -d --build
+services:
+  sqlserver:
+    networks:
+      default: {}
+      data:
+        aliases:
+          - legado-sqlserver
+
+networks:
+  data:
+    name: workspace-data
+    external: true

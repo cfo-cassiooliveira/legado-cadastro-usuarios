@@ -27,7 +27,7 @@ legado-backend/    API .NET 10 (Domain, Application, Infrastructure, Api) + test
 legado-frontend/   Angular 22 (standalone, signals, zoneless, Signal Forms, Vitest, Stylelint) + nginx
 e2e/               Playwright + axe-core (desktop, tablet, celular) contra o docker compose (scripts/e2e.sh)
 docs/adr/          ADR-0001 (auth legada), ADR-0002 (ViaCEP/IBGE), ADR-0005 (API interna de migração)
-docker-compose.yml sqlserver -> migrator -> api -> web
+docker-compose.yml sqlserver -> migrator -> api -> web (overrides: .identity.yml, .data.yml, .graylog.yml)
 ```
 
 ## Stack deste projeto (diferenças do padrão)
@@ -41,6 +41,7 @@ docker-compose.yml sqlserver -> migrator -> api -> web
   HMAC com nonce e janela de 60 s, permissão por chamador, nada sensível em log, tempo constante para usuário
   inexistente; TLS só com a CA deste Legado. Mudar o contrato exige nova versão e ajuste nos testes do Keycloak e do
   Cadastro (`Internal/hmac-test-vectors.json`). Ordem de subida e comandos: `docs/reference.md` e README.
+- Esquema `import` (tabelas do Cadastro) no `LegadoUsers`, via `docker-compose.data.yml` + `scripts/data-network.sh`: `cadastro_migrator`/`cadastro_app` sem acesso ao `dbo`, `legacy_app` com DENY (`docs/reference.md`). Chave HMAC do Cadastro nunca chama `credential-verifications`.
 - Imagens Docker fixadas por **tag + digest**: atualize os dois juntos.
 - Testes .NET: xUnit v3 no **Microsoft.Testing.Platform** (`global.json`) e cobertura via
   `Microsoft.Testing.Extensions.CodeCoverage`.

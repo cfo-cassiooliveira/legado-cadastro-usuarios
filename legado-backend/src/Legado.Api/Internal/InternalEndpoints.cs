@@ -23,8 +23,8 @@ internal static class InternalEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
         group.MapPost("/credential-verifications", VerifyCredentialsAsync).RequireAuthorization(InternalApiSetup.MigratePolicy);
-        group.MapPost("/user-lookups", LookupAsync).RequireAuthorization(InternalApiSetup.MigratePolicy);
-        group.MapPut("/users/{legacyUserId:guid}/migration", MarkMigratedAsync).RequireAuthorization(InternalApiSetup.MigratePolicy)
+        group.MapPost("/user-lookups", LookupAsync).RequireAuthorization(InternalApiSetup.LookupAndMarkPolicy);
+        group.MapPut("/users/{legacyUserId:guid}/migration", MarkMigratedAsync).RequireAuthorization(InternalApiSetup.LookupAndMarkPolicy)
             .Produces(StatusCodes.Status204NoContent)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound)

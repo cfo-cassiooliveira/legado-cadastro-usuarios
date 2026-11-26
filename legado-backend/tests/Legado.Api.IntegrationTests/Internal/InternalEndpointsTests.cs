@@ -107,12 +107,11 @@ public sealed class InternalEndpointsTests(LegadoApiFactory factory) : IAsyncLif
         await _internal.PostJsonAsync(Verify, new { login = "aquecimento", password = "Errada@123" });
 
         var unknown = await MedianMillisecondsAsync(() => _internal.PostJsonAsync(Verify, new { login = "nao.existe", password = "Errada@123" }));
-        var wrong = await MedianMillisecondsAsync(async () =>
-        {
-            var result = await _internal.PostJsonAsync(Verify, new { login = userName, password = "Errada@123" });
-            await ResetFailuresAsync(userName);
-            return result;
-        });
+        // O reset de falhas fica fora do cronômetro: ele só evita o bloqueio da conta e, se contado, soma
+        // latência de banco que o ramo "conta inexistente" não tem (deixa o teste instável sob carga).
+        var wrong = await MedianMillisecondsAsync(
+            () => _internal.PostJsonAsync(Verify, new { login = userName, password = "Errada@123" }),
+            () => ResetFailuresAsync(userName));
 
         Math.Abs(unknown - wrong).ShouldBeLessThan(Math.Max(unknown, wrong) * 0.3);
     }
@@ -295,6 +294,73 @@ public sealed class InternalEndpointsTests(LegadoApiFactory factory) : IAsyncLif
         keycloakOnExistence.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
+    // Chave do Cadastro (importação, ADR-0006 do rabbitmq): consulta e marca a migração, mas nunca verifica senha.
+    [Fact]
+    public async Task CadastroKey_ReachesLookupAndMigration_ButNotCredentialVerification()
+    {
+        var userName = await RegisterAsync();
+        var legacyId = await LegacyIdAsync(userName);
+
+        using var lookup = await _internal.SendAsync(HttpMethod.Post, Lookup, new { login = userName }, keyId: "cadastro-1");
+        using var migration = await _internal.SendAsync(
+            HttpMethod.Put, $"/api/v1/internal/users/{legacyId}/migration", new { keycloakUserId = Guid.NewGuid() }, keyId: "cadastro-1");
+        using var verify = await _internal.SendAsync(HttpMethod.Post, Verify, new { login = userName, password = TestUsers.Password }, keyId: "cadastro-1");
+
+        lookup.StatusCode.ShouldBe(HttpStatusCode.OK);
+        migration.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        verify.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    // Mesmos contratos de erro quando quem chama é o Cadastro (a policy compartilhada não pode afrouxar a marcação).
+    [Fact]
+    public async Task CadastroKey_Migration_KeepsConflictNotFoundAndBadRequestContracts()
+    {
+        var legacyId = await LegacyIdAsync(await RegisterAsync());
+        var keycloakUserId = Guid.NewGuid();
+        var path = $"/api/v1/internal/users/{legacyId}/migration";
+
+        using var first = await _internal.SendAsync(HttpMethod.Put, path, new { keycloakUserId }, keyId: "cadastro-1");
+        using var again = await _internal.SendAsync(HttpMethod.Put, path, new { keycloakUserId }, keyId: "cadastro-1");
+        using var other = await _internal.SendAsync(HttpMethod.Put, path, new { keycloakUserId = Guid.NewGuid() }, keyId: "cadastro-1");
+        using var unknown = await _internal.SendAsync(HttpMethod.Put, $"/api/v1/internal/users/{Guid.NewGuid()}/migration", new { keycloakUserId }, keyId: "cadastro-1");
+        using var missing = await _internal.SendAsync(HttpMethod.Put, path, new { }, keyId: "cadastro-1");
+
+        first.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        again.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        other.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        missing.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    // A importação consulta pelo e-mail da planilha: achado, inexistente e requisição sem login.
+    [Fact]
+    public async Task CadastroKey_Lookup_FindsByEmailAndReportsNotFound_AndRejectsMissingLogin()
+    {
+        var userName = await RegisterAsync();
+
+        var byEmail = await _internal.PostJsonAsync(Lookup, new { login = $"{userName}@exemplo.com" }, "cadastro-1");
+        var unknown = await _internal.PostJsonAsync(Lookup, new { login = "ninguem@exemplo.com" }, "cadastro-1");
+        using var missing = await _internal.SendAsync(HttpMethod.Post, Lookup, new { }, keyId: "cadastro-1");
+
+        byEmail.GetProperty("outcome").GetString().ShouldBe("found");
+        unknown.GetProperty("outcome").GetString().ShouldBe("not_found");
+        missing.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    // Regressão da policy compartilhada: a chave do Keycloak continua consultando e marcando, e nunca chega na existência.
+    [Fact]
+    public async Task KeycloakKey_StillReachesLookupAndMigration()
+    {
+        var userName = await RegisterAsync();
+        var legacyId = await LegacyIdAsync(userName);
+
+        using var migration = await _internal.SendAsync(HttpMethod.Put, $"/api/v1/internal/users/{legacyId}/migration", new { keycloakUserId = Guid.NewGuid() });
+        var lookup = await _internal.PostJsonAsync(Lookup, new { login = userName });
+
+        migration.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        lookup.GetProperty("outcome").GetString().ShouldBe("migrated");
+    }
+
     // O JWT do próprio Legado não abre o grupo interno, e a assinatura HMAC não abre as rotas públicas.
     [Fact]
     public async Task Schemes_DoNotCrossBetweenInternalAndPublicRoutes()
@@ -380,7 +446,7 @@ public sealed class InternalEndpointsTests(LegadoApiFactory factory) : IAsyncLif
         await manager.ResetAccessFailedCountAsync((await manager.FindByNameAsync(userName))!);
     }
 
-    private static async Task<double> MedianMillisecondsAsync(Func<Task<JsonElement>> call)
+    private static async Task<double> MedianMillisecondsAsync(Func<Task<JsonElement>> call, Func<Task>? afterEachSample = null)
     {
         var samples = new List<double>();
         for (var i = 0; i < 15; i++)
@@ -388,6 +454,12 @@ public sealed class InternalEndpointsTests(LegadoApiFactory factory) : IAsyncLif
             var stopwatch = Stopwatch.StartNew();
             await call();
             samples.Add(stopwatch.Elapsed.TotalMilliseconds);
+
+            // Preparação para a próxima amostra, não medida.
+            if (afterEachSample is not null)
+            {
+                await afterEachSample();
+            }
         }
 
         samples.Sort();

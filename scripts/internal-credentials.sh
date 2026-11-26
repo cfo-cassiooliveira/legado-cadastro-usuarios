@@ -4,6 +4,7 @@
 #   secrets/internal/ca.crt               certificado da CA (público: o Keycloak e o Cadastro confiam só nele)
 #   secrets/internal/server/legado-api.*  certificado TLS da API (SAN legado-api, 1 ano) montado no container
 #   .env                                  LEGADO_INTERNAL_KEYCLOAK_KEY e LEGADO_INTERNAL_CADASTRO_KEY (HMAC, 256 bits)
+#                                         e CADASTRO_MIGRATOR_PASSWORD / CADASTRO_APP_PASSWORD (logins SQL do esquema import)
 # Idempotente: mantém a CA e as chaves existentes e só reemite o certificado ausente ou a menos de 30 dias do fim.
 # Tudo fica em arquivos ignorados pelo git e pelo Docker (Art. IV.4). Uso: ./scripts/internal-credentials.sh
 set -euo pipefail
@@ -65,3 +66,17 @@ ensure_key() {
 }
 ensure_key LEGADO_INTERNAL_KEYCLOAK_KEY
 ensure_key LEGADO_INTERNAL_CADASTRO_KEY
+
+# Senhas dos logins SQL do Cadastro (esquema import): hex + sufixo cumprem a política de complexidade do SQL Server.
+ensure_sql_password() {
+  local name="$1"
+  if grep -Eq "^${name}=.+" "$ENV_FILE"; then
+    echo "${name} já existe no .env."
+  else
+    sed -i "/^${name}=/d" "$ENV_FILE"
+    printf '%s=%s\n' "$name" "Cd$(openssl rand -hex 16)#1" >> "$ENV_FILE"
+    echo "${name} gerada no .env."
+  fi
+}
+ensure_sql_password CADASTRO_MIGRATOR_PASSWORD
+ensure_sql_password CADASTRO_APP_PASSWORD

@@ -36,6 +36,9 @@ services:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
       APP_DB_USER: legacy_app
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no .env}
+      # Opcionais: com as duas, cria o esquema import e os logins do Cadastro (./scripts/internal-credentials.sh).
+      CADASTRO_MIGRATOR_PASSWORD: ${CADASTRO_MIGRATOR_PASSWORD:-}
+      CADASTRO_APP_PASSWORD: ${CADASTRO_APP_PASSWORD:-}
     depends_on:
       sqlserver:
         condition: service_healthy

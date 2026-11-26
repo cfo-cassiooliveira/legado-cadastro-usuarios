@@ -37,6 +37,16 @@
   depende do Keycloak nem do Cadastro); só na porta HTTPS interna (8443), nunca na pública nem no nginx; assinatura
   HMAC com nonce, janela de 60 s e anti-reenvio; permissão por chamador (`keycloak`/`cadastro`); assinatura nunca em log; usuário inexistente gasta o mesmo tempo que senha errada. Cobertas por
   `tests/Legado.Api.IntegrationTests/Internal/`. Credenciais locais: `scripts/internal-credentials.sh` (`secrets/`).
+- Permissões por chamador: `keycloak` → `credential-verifications`, `user-lookups`, `PUT users/{id}/migration`;
+  `cadastro` → `user-lookups`, `PUT users/{id}/migration` e `user-existence-checks`, **nunca** `credential-verifications`
+  (a senha só vai ao Keycloak; teste `CadastroKey_ReachesLookupAndMigration_ButNotCredentialVerification`).
+- Rede de dados (importação do Cadastro): `./scripts/data-network.sh` e `docker compose -f docker-compose.yml -f docker-compose.data.yml up -d --build`
+  põem o SQL Server em `workspace-data` (alias `legado-sqlserver`; a porta 1433 segue só em `127.0.0.1`). O migrator cria o esquema
+  `import` em `LegadoUsers` e os logins `cadastro_migrator` (DDL só em `import`) e `cadastro_app` (DML só em `import`), sem acesso ao
+  `dbo`; `legacy_app` tem DENY em `import` (`legado-database/scripts/create-import-schema.sql`; senhas `CADASTRO_MIGRATOR_PASSWORD`/
+  `CADASTRO_APP_PASSWORD` geradas por `internal-credentials.sh`). As tabelas são do Cadastro (migrations dele). Teste: `Persistence/ImportSchemaTests`.
+  **Risco aceito (ADR-0007 do Cadastro):** `workspace-data` é uma rede compartilhada; qualquer container nela alcança `legado-sqlserver:1433`
+  (login `sa`) e só a senha o protege. Mitigação: senha forte gerada, rede só local e nenhum container não confiável nela.
 - Ordem e comandos com o Keycloak/Cadastro: `./scripts/identity-network.sh` → `./scripts/internal-credentials.sh` →
   `docker compose -f docker-compose.yml -f docker-compose.identity.yml [-f docker-compose.graylog.yml] up -d --build`
   (README, "Ordem para subir com o Keycloak e o Cadastro"). O Keycloak lê `LEGADO_INTERNAL_KEYCLOAK_KEY` daqui como

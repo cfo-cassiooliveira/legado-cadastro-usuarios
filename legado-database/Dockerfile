@@ -22,7 +22,7 @@ WORKDIR /migrator
 # O bundle é single-file e extrai dependências; o home do usuário mssql não é gravável.
 ENV DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp/efbundle
 COPY --from=build --chmod=755 /out/efbundle ./efbundle
-COPY --chmod=644 legado-database/scripts/create-app-login.sql ./
+COPY --chmod=644 legado-database/scripts/create-app-login.sql legado-database/scripts/create-import-schema.sql ./
 COPY --chmod=755 legado-database/scripts/migrate.sh ./
 # A imagem do SQL Server já roda como mssql; declarado aqui para não depender do herdado (Trivy DS002).
 USER mssql

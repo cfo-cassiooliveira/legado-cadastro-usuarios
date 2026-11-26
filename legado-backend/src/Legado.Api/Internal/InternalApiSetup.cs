@@ -13,8 +13,11 @@ internal static class InternalApiSetup
     /// <summary>Prefixo das rotas internas.</summary>
     public const string RoutePrefix = "/api/v1/internal";
 
-    /// <summary>Policy: o Keycloak verifica credenciais, consulta contas e marca migrações.</summary>
+    /// <summary>Policy: só o Keycloak verifica credenciais (a senha nunca é entregue ao Cadastro).</summary>
     public const string MigratePolicy = "legacy-users:migrate";
+
+    /// <summary>Policy: Keycloak e Cadastro consultam contas por login/e-mail e marcam a migração (<c>PUT users/{id}/migration</c>).</summary>
+    public const string LookupAndMarkPolicy = "legacy-users:lookup-mark";
 
     /// <summary>Policy: o Cadastro consulta se login/e-mail estão em uso.</summary>
     public const string CheckPolicy = "legacy-users:check";
@@ -30,6 +33,9 @@ internal static class InternalApiSetup
             .AddPolicy(MigratePolicy, policy => policy
                 .AddAuthenticationSchemes(LegadoHmacAuthenticationHandler.SchemeName)
                 .RequireClaim(LegadoHmacAuthenticationHandler.CallerClaim, "keycloak"))
+            .AddPolicy(LookupAndMarkPolicy, policy => policy
+                .AddAuthenticationSchemes(LegadoHmacAuthenticationHandler.SchemeName)
+                .RequireClaim(LegadoHmacAuthenticationHandler.CallerClaim, "keycloak", "cadastro"))
             .AddPolicy(CheckPolicy, policy => policy
                 .AddAuthenticationSchemes(LegadoHmacAuthenticationHandler.SchemeName)
                 .RequireClaim(LegadoHmacAuthenticationHandler.CallerClaim, "cadastro"));

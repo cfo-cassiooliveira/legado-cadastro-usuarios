@@ -52,6 +52,7 @@ o modelo [`.env.example`](.env.example), sem valores, com instruções para gera
 | `SEED_DEFAULT_PASSWORD` | Se `SEED_ENABLED=true` | Senha de todos os usuários de demonstração | 8+ caracteres com maiúscula, minúscula, número e símbolo |
 | `API_ENVIRONMENT` | Não (padrão `Production`) | Ambiente ASP.NET Core da API | `Production` ou `Development` (publica o OpenAPI na rede interna) |
 | `LEGADO_INTERNAL_KEYCLOAK_KEY` / `LEGADO_INTERNAL_CADASTRO_KEY` | Só com `docker-compose.identity.yml` | Chaves HMAC da API interna de migração, uma por chamador | Base64 de 32 bytes, geradas por `./scripts/internal-credentials.sh` |
+| `CADASTRO_MIGRATOR_PASSWORD` / `CADASTRO_APP_PASSWORD` | Não | Senhas dos logins SQL `cadastro_migrator` (DDL) e `cadastro_app` (DML) do esquema `import`; vazias = esquema não criado | Política do SQL Server, sem aspas simples; geradas por `./scripts/internal-credentials.sh` |
 | `LOG_PSEUDONYMIZATION_KEY_K1` / `LOG_PSEUDONYMIZATION_KEY_K2` | A do `CURRENT_KEY_ID` (a API não sobe sem ela) | Chave HMAC que gera os campos `*_token` dos logs (ADR-0003 do `../graylog`); a mesma do `../cadastro` no ambiente | Base64 de 32 bytes, gerada ou copiada do `../cadastro/.env` por `./scripts/log-pseudonymization-key.sh` |
 | `LOG_PSEUDONYMIZATION_CURRENT_KEY_ID` | Não (padrão `k1`) | Id da chave que emite os tokens (rotação anual: `k2`...) | `k` + número |
 

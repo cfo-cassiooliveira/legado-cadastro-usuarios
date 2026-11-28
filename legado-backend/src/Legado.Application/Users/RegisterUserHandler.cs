@@ -40,7 +40,10 @@ public interface IRegisterUserHandler
     Task<Result<Guid>> HandleAsync(RegisterUserCommand command, CancellationToken cancellationToken);
 }
 
-/// <summary>Implementação do caso de uso de autocadastro.</summary>
+/// <summary>
+/// Implementação do caso de uso de autocadastro. CEP e município são conferidos no servidor porque o formulário não é
+/// confiável; custo: o cadastro depende do ViaCEP e do IBGE e responde 503 quando a consulta falha (ADR-0002).
+/// </summary>
 internal sealed partial class RegisterUserHandler(
     IPostalCodeLookup postalCodeLookup,
     ICityDirectory cityDirectory,

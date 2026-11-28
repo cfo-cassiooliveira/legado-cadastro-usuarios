@@ -4,6 +4,28 @@ Sistema **legado proposital** de cadastro de usuários com login próprio (ASP.N
 Serve de base para simular a **migração dos usuários existentes para o Keycloak**, levando a senha
 (hash PBKDF2-SHA512 importável). Veja o [ADR-0001](docs/adr/0001-autenticacao-propria-legada.md).
 
+## Destaques técnicos
+
+- [API interna assinada por HMAC](legado-backend/src/Legado.Api/Internal/HmacSignature.cs): o Keycloak e o Cadastro chamam o Legado sem que ele
+  dependa deles, com integridade do corpo e anti-reenvio, em [porta TLS própria](legado-backend/src/Legado.Api/Internal/InternalApiSetup.cs).
+- [Verificação de senha para a migração](legado-backend/src/Legado.Application/Users/Migration/VerifyLegacyCredentialsHandler.cs):
+  migrar usuários sob demanda sem compartilhar o banco nem expor o hash.
+- [Token preso a um cookie e conferido no servidor](legado-backend/src/Legado.Api/Auth/LegacyJwtBearerEvents.cs): token vazado sozinho não
+  funciona, e logout ou bloqueio valem na hora.
+- [Pseudonimização dos logs na origem](legado-backend/src/Legado.Api/Common/Pseudonymization/PseudonymizationEnricher.cs): investigar os eventos
+  de um titular sem gravar o dado em claro (LGPD).
+- [Logs do navegador como entrada não confiável](legado-backend/src/Legado.Api/ClientLogs/ClientLogEndpoints.cs): rastrear falhas da tela sem
+  abrir caminho para forjar linhas de log ou registrar dado pessoal de formato reconhecível.
+- [Esquema SQL com privilégio mínimo](legado-database/scripts/create-import-schema.sql): o Cadastro importa usuários
+  sem acesso às tabelas de identidade.
+- [Regras de arquitetura como teste](legado-backend/tests/Legado.ArchitectureTests/LayerDependencyTests.cs): uma
+  dependência indevida entre camadas faz os testes falharem.
+
+## Uso de IA
+
+Este projeto foi desenvolvido com auxílio de IA (**Claude Code**), na implementação e em code review. As decisões de
+arquitetura estão registradas nas ADRs, e as mudanças passam por testes automatizados e CI antes de entrar na `master`.
+
 ## Estrutura
 
 | Pasta | O que é |
@@ -103,7 +125,8 @@ Chamar a API autenticada exige **duas coisas juntas**: o header `Authorization: 
 | CSP + Trusted Types | Sem `unsafe-inline` (nonce por requisição), só scripts da própria origem | Injeção de script (XSS), que seria o vetor de roubo de token |
 | Autorização | Fallback "negar por padrão"; `/users` só para Admin; `/me` usa só o `sub` do token | Acesso anônimo, escalada de perfil, IDOR |
 
-Cada linha tem teste automatizado em `legado-backend/tests/Legado.Api.IntegrationTests/Security/`.
+Os testes automatizados ficam em `legado-backend/tests/Legado.Api.IntegrationTests/` (pasta `Security/`; os de
+autorização, em `Users/`); o do token só em memória é do front (`legado-frontend/src/app/auth/auth-store.spec.ts`).
 Os mesmos ataques também foram reproduzidos no navegador real (Edge, via Playwright).
 Riscos aceitos e decisão completa: [ADR-0001](docs/adr/0001-autenticacao-propria-legada.md).
 
@@ -217,7 +240,7 @@ segredos `SONAR_TOKEN` e `SONAR_HOST_URL` existem: os runners do GitHub não alc
 - Tabela `AspNetUsers`: `PasswordHash` no formato Identity V3 (byte `0x01` + PRF SHA-512 + 100.000 iterações +
   salt 16 bytes + subkey 32 bytes, em base64).
 - Perfis em `AspNetRoles`/`AspNetUserRoles` (`Admin`, `User`) mapeiam para realm roles.
-- O banco fica acessível em `localhost:1433` (somente local) para o processo de migração.
+- O banco fica acessível em `localhost:1433` (somente local) para inspeção; a migração sob demanda usa a API interna abaixo.
 
 ### API interna de migração (opcional, [ADR-0005](docs/adr/0005-api-interna-de-migracao-para-keycloak.md))
 
@@ -252,8 +275,8 @@ O Legado sobe **sozinho**, sem nenhum dos dois (a API interna é opcional e nada
    a do Cadastro.
 4. Depois, o `../cadastro` (`http://localhost:4300`). Trocou o `.env` ou a CA? Recrie os containers dependentes.
 
-Quem consome: o Keycloak (verificação de credenciais, consulta e marcação) e o Cadastro (checagem de existência),
-cada um com a própria chave HMAC. Decisão: [ADR-0005](docs/adr/0005-api-interna-de-migracao-para-keycloak.md) (aceito).
+Quem consome: o Keycloak (verificação de credenciais, consulta e marcação) e o Cadastro (consulta, marcação e checagem
+de existência), cada um com a própria chave HMAC. Decisão: [ADR-0005](docs/adr/0005-api-interna-de-migracao-para-keycloak.md) (aceito).
 
 #### E2E da migração
 

@@ -9,7 +9,7 @@ namespace Legado.Api.Internal;
 
 /// <summary>
 /// Autentica as chamadas internas pela assinatura HMAC (ADR-0005): chave conhecida, horário dentro da janela, corpo
-/// íntegro (comparação em tempo constante) e nonce nunca visto antes para a chave (anti-reenvio). Qualquer falha é 401 genérico.
+/// íntegro (comparação em tempo constante) e nonce ainda não registrado para a chave (anti-reenvio). Qualquer falha é 401 genérico.
 /// </summary>
 internal sealed partial class LegadoHmacAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -77,7 +77,7 @@ internal sealed partial class LegadoHmacAuthenticationHandler(
             return Reject("invalid", keyId);
         }
 
-        // Anti-reenvio: cada nonce vale uma vez por chave dentro da janela (cache local, uma instância). Usar o nonce,
+        // Anti-reenvio: nonce já registrado para a chave é recusado dentro da janela (cache local, uma instância). Usar o nonce,
         // e não a assinatura, deixa passar duas chamadas legítimas idênticas no mesmo segundo (retentativa do PUT).
         var replayKey = ReplayKeyPrefix + keyId + ":" + parsed.Nonce;
         if (replayCache.TryGetValue(replayKey, out _))

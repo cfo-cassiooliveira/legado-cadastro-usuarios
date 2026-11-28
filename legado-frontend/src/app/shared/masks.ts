@@ -6,6 +6,7 @@ const MOBILE_DIGITS = 11;
 const AREA_CODE_DIGITS = 2;
 const MOBILE_PREFIX_DIGITS = 7;
 
+/** Remove tudo que não for dígito. */
 export function digitsOnly(value: string): string {
   return value.replace(/\D/g, '');
 }
@@ -30,6 +31,7 @@ export function formatMobilePhone(value: string): string {
   return suffix ? `(${areaCode}) ${prefix}-${suffix}` : `(${areaCode}) ${prefix}`;
 }
 
+/** Indica se o CEP já tem os 8 dígitos necessários para a consulta. */
 export function isCompletePostalCode(value: string): boolean {
   return digitsOnly(value).length === POSTAL_CODE_DIGITS;
 }

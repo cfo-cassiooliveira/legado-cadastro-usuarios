@@ -42,6 +42,7 @@ const NETWORK_ERROR = $localize`Sem comunicação com o servidor.`;
 const RATE_LIMITED = $localize`Muitas tentativas. Aguarde um minuto e tente novamente.`;
 const HTTP_STATUS_TOO_MANY_REQUESTS = 429;
 
+/** Mensagem do código; código sem tradução vira a mensagem genérica, sem expor o código na tela. */
 export function messageForCode(code: string): string {
   return MESSAGES[code] ?? GENERIC_ERROR;
 }

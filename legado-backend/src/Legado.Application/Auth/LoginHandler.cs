@@ -31,7 +31,7 @@ internal sealed partial class LoginHandler(
     private static readonly DomainError InvalidCredentials =
         new("auth.invalid_credentials", "credentials", "Invalid user name or password.", ErrorType.Unauthorized);
 
-    // Só aparece com a senha correta (RN-08): quem não sabe a senha recebe a resposta genérica acima.
+    // Só aparece com a senha correta (RN-08 da spec 001 do cadastro): quem não sabe a senha recebe a resposta genérica acima.
     private static readonly DomainError AccountMigrated =
         new(ILoginHandler.AccountMigratedCode, "credentials", "This account was moved to the new system.", ErrorType.Unauthorized);
 

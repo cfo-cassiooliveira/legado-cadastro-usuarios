@@ -60,6 +60,7 @@ export const PASSWORD_RULES: readonly PasswordRule[] = [
   { label: $localize`Símbolo`, test: (v) => /[^A-Za-z0-9]/.test(v) },
 ];
 
+/** Indica se a senha cumpre todas as regras de {@link PASSWORD_RULES}. */
 export function isStrongPassword(value: string): boolean {
   return PASSWORD_RULES.every((rule) => rule.test(value));
 }

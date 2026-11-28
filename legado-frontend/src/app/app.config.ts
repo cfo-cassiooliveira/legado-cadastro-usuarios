@@ -6,6 +6,7 @@ import { authInterceptor } from './auth/auth.interceptor';
 import { correlationIdInterceptor } from './core/correlation-id.interceptor';
 import { GlobalErrorHandler } from './core/global-error-handler';
 
+/** Providers da aplicação: erros não tratados vão ao logger e o HttpClient injetado usa os interceptors de correlação e autenticação. */
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),

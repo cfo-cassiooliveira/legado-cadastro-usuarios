@@ -9,15 +9,15 @@ using Microsoft.Extensions.Logging;
 namespace Legado.Infrastructure.Users;
 
 /// <summary>
-/// Grava a migração da conta (<c>MigratedAt</c> + <c>KeycloakUserId</c>) e renova o <c>SecurityStamp</c> pelo
-/// Identity, o que invalida na hora todos os tokens do Legado daquela conta (ADR-0001/0005).
+/// Marca a conta como migrada (<c>MigratedAt</c> + <c>KeycloakUserId</c>) pelo Identity. A atualização que grava a marca
+/// também renova o <c>SecurityStamp</c>, e tokens com o carimbo anterior são recusados (ADR-0001/0005).
 /// </summary>
 internal sealed partial class UserMigrationWriter(
     UserManager<ApplicationUser> userManager,
     TimeProvider timeProvider,
     ILogger<UserMigrationWriter> logger) : IUserMigrationWriter
 {
-    // Conflito de concorrência (ConcurrencyStamp) é previsto: recarrega e tenta de novo antes de desistir.
+    // Máximo de passadas pelo laço quando o Identity informa conflito de concorrência (ConcurrencyStamp).
     private const int MaxAttempts = 3;
 
     /// <summary>Marca a conta como migrada; idempotente para o mesmo usuário do Keycloak.</summary>

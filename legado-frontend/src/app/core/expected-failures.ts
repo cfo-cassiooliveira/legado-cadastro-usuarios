@@ -13,6 +13,7 @@ const EXPECTED_FAILURES: ReadonlySet<number> = new Set([
   HttpStatusCode.TooManyRequests,
 ]);
 
+/** Indica se o status deve ser registrado como warning em vez de error. */
 export function isExpectedFailure(status: number): boolean {
   return EXPECTED_FAILURES.has(status);
 }

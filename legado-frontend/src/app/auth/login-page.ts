@@ -28,6 +28,7 @@ interface LoginModel {
   password: string;
 }
 
+/** Tela de login; também trata a conta já migrada, avisando e redirecionando para o Cadastro. */
 @Component({
   selector: 'app-login-page',
   imports: [FormField, RouterLink, FieldErrors, AuthHero],

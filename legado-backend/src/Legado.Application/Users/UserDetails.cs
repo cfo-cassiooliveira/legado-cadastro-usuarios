@@ -1,6 +1,14 @@
 namespace Legado.Application.Users;
 
 /// <summary>Dados completos do usuário para a tela de perfil.</summary>
+/// <param name="Id">Id técnico do usuário.</param>
+/// <param name="UserName">Login.</param>
+/// <param name="FullName">Nome completo.</param>
+/// <param name="Email">E-mail.</param>
+/// <param name="MobilePhone">Celular em E.164.</param>
+/// <param name="Address">Endereço residencial.</param>
+/// <param name="Roles">Perfis do usuário.</param>
+/// <param name="CreatedAt">Data do cadastro (UTC).</param>
 public sealed record UserDetails(
     Guid Id,
     string UserName,
@@ -31,8 +39,17 @@ public sealed record UserAddressDto(
     string State);
 
 /// <summary>Linha da listagem administrativa de usuários.</summary>
+/// <param name="Id">Id técnico do usuário.</param>
+/// <param name="UserName">Login.</param>
+/// <param name="FullName">Nome completo.</param>
+/// <param name="Email">E-mail.</param>
+/// <param name="CreatedAt">Data do cadastro (UTC).</param>
 public sealed record UserSummary(Guid Id, string UserName, string FullName, string Email, DateTimeOffset CreatedAt);
 
 /// <summary>Página de resultados.</summary>
 /// <typeparam name="T">Tipo do item.</typeparam>
+/// <param name="Items">Itens da página.</param>
+/// <param name="Page">Número da página, a partir de 1.</param>
+/// <param name="PageSize">Tamanho pedido.</param>
+/// <param name="TotalCount">Total de itens em todas as páginas.</param>
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

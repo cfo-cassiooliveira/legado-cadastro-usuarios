@@ -21,6 +21,7 @@ export interface RegistrationModel {
   cityIbgeCode: string;
 }
 
+/** Estado inicial; as chaves também identificam quais erros da API pertencem a um campo. */
 export const EMPTY_REGISTRATION: RegistrationModel = {
   fullName: '',
   userName: '',

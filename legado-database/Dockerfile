@@ -1,7 +1,7 @@
 # Migrator do banco legado. Contexto de build: raiz do repositório (precisa do backend para o modelo EF).
 
 # Etapa 1: gera o EF migration bundle (executável self-contained para Linux).
-# Versões fixadas por digest (OWASP A03): SDK 10.0.403 / ASP.NET 10.0.14. Atualize tag e digest juntos.
+# Versões fixadas por digest (OWASP A03): SDK 10.0.404 / SQL Server 2025. Atualize tag e digest juntos.
 FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS build
 WORKDIR /src
 COPY dotnet-tools.json Directory.Build.props Directory.Packages.props .editorconfig ./

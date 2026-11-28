@@ -98,7 +98,7 @@ internal sealed record CredentialVerificationRequest(string? Login, string? Pass
 /// <param name="User">Dados da conta, só em <c>valid</c>.</param>
 internal sealed record CredentialVerificationResponse(string Outcome, LegacyUser? User);
 
-/// <summary>Pedido de consulta por login ou e-mail (Keycloak, no reset de senha).</summary>
+/// <summary>Pedido de consulta por login ou e-mail (permitido ao Keycloak e ao Cadastro).</summary>
 /// <param name="Login">Login ou e-mail.</param>
 internal sealed record UserLookupRequest(string? Login);
 

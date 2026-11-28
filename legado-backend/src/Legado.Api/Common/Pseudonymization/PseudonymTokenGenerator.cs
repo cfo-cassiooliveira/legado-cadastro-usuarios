@@ -8,6 +8,8 @@ namespace Legado.Api.Common.Pseudonymization;
 /// Gera o token pseudônimo pesquisável do ADR-0003 do graylog com a chave atual:
 /// <c>"&lt;keyId&gt;-" + hex(HMAC-SHA256(chave, "&lt;domínio&gt;|" + canônico))[0..32]</c>, hex minúsculo.
 /// E-mail e login usam o mesmo domínio (<c>login</c>), então geram o mesmo token.
+/// <para>HMAC com chave, e não hash simples: CPF e telefone têm poucas combinações e um SHA-256 puro seria revertido por
+/// força bruta. Custo: a chave é compartilhada com o Cadastro, e trocá-la muda os tokens.</para>
 /// </summary>
 internal sealed class PseudonymTokenGenerator
 {

@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { adminGuard, authGuard } from './auth/auth.guards';
 
+/** Rotas carregadas sob demanda; os guards só ajudam a navegação, quem autoriza é a API. */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   {

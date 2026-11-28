@@ -2,7 +2,7 @@ using Legado.Domain.Common;
 
 namespace Legado.Application.Users.Migration;
 
-/// <summary>Pedido do Keycloak para registrar que a conta passou a ter senha no Keycloak.</summary>
+/// <summary>Pedido do Keycloak ou do Cadastro para registrar que a conta passou a ter senha no Keycloak.</summary>
 /// <param name="LegacyUserId">Id da conta no Legado.</param>
 /// <param name="KeycloakUserId">Id do usuário no Keycloak.</param>
 public sealed record MarkUserMigratedCommand(Guid LegacyUserId, Guid KeycloakUserId);

@@ -1,5 +1,6 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 
+/** Header de correlação, o mesmo lido pela API. */
 export const CORRELATION_ID_HEADER = 'X-Correlation-Id';
 
 /** Envia um X-Correlation-Id por requisição para rastrear a chamada nos logs da API. */

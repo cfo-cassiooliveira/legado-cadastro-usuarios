@@ -30,6 +30,7 @@ const MAX_STACK_LENGTH = 3000;
  * Registra eventos do navegador na API (que os envia ao Graylog), para que falhas do frontend sejam rastreáveis.
  * Regra: exceção capturada → error; falha de negócio esperada → warning; operação concluída → info.
  * Nunca envie valores digitados pelo usuário: só códigos de evento, origem e status.
+ * Envio de melhor esforço: sem fila nem nova tentativa, então um evento que não chega à API se perde.
  */
 @Injectable({ providedIn: 'root' })
 export class AppLogger {

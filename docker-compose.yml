@@ -15,7 +15,7 @@ services:
       MSSQL_MEMORY_LIMIT_MB: "2048"
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?defina MSSQL_SA_PASSWORD no .env}
     ports:
-      # Publicado só em localhost, para inspeção com SSMS/Azure Data Studio e para a futura migração.
+      # Publicado só em localhost, para inspeção com SSMS/Azure Data Studio (a migração usa a API interna, ADR-0005).
       - "127.0.0.1:1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql

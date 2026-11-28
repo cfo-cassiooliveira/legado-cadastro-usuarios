@@ -8,10 +8,14 @@ namespace Legado.Application.Users.Migration;
 /// <param name="Password">Senha digitada pelo usuário.</param>
 public sealed record VerifyLegacyCredentialsCommand(string Login, string Password);
 
-/// <summary>Caso de uso: o Legado decide se as credenciais valem (ADR-0005); o Keycloak nunca vê o hash.</summary>
+/// <summary>
+/// Caso de uso: o Legado decide se as credenciais valem (ADR-0005); o Keycloak nunca vê o hash.
+/// <para>Assim o banco não é compartilhado e o hash e o bloqueio ficam num só lugar. Custo: a senha digitada trafega até
+/// aqui (TLS 1.3) e, enquanto a conta não migra, o login no Keycloak depende do Legado no ar.</para>
+/// </summary>
 public interface IVerifyLegacyCredentialsHandler
 {
-    /// <summary>Verifica as credenciais com o mesmo controle de bloqueio e tempo equalizado do login do Legado.</summary>
+    /// <summary>Verifica as credenciais com o mesmo verificador (e controle de bloqueio) do login do Legado.</summary>
     Task<LegacyCredentialResult> HandleAsync(VerifyLegacyCredentialsCommand command, CancellationToken cancellationToken);
 }
 
@@ -30,7 +34,7 @@ internal sealed partial class VerifyLegacyCredentialsHandler(
         ArgumentNullException.ThrowIfNull(command);
         var login = command.Login.Trim();
 
-        // Login inexistente segue com o próprio texto: o verificador compara com um hash fictício (mesmo tempo).
+        // Login inexistente segue com o próprio texto: o verificador compara com um hash fictício.
         var userName = await users.FindUserNameAsync(login, cancellationToken) ?? login;
         var verification = await credentialVerifier.VerifyAsync(userName, command.Password, cancellationToken);
 

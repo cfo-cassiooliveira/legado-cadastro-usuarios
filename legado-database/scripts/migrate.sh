@@ -1,5 +1,7 @@
 #!/bin/bash
 # Aplica as migrations (EF bundle) e garante o login de aplicação. Idempotente: pode rodar a cada "compose up".
+# Fica fora da API para que ela use um login sem DDL e nunca receba a senha do sa. Custo: um container a mais, que
+# precisa terminar com sucesso antes de a API subir.
 set -euo pipefail
 
 : "${DB_HOST:?DB_HOST is required}"

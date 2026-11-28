@@ -8,6 +8,8 @@ namespace Legado.Api.Auth;
 /// <summary>
 /// Validações extras após a assinatura/expiração do JWT: o token precisa vir acompanhado do cookie de fingerprint
 /// e a sessão precisa continuar ativa no servidor (sem logout, sem bloqueio, usuário existente).
+/// <para>Um JWT sozinho só deixa de valer quando expira; a conferência faz logout e bloqueio valerem na hora. Custo: uma
+/// leitura por chave primária a cada requisição autenticada (ADR-0001).</para>
 /// </summary>
 internal sealed partial class LegacyJwtBearerEvents(
     ISessionValidator sessionValidator,

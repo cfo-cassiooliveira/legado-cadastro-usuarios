@@ -7,6 +7,8 @@ namespace Legado.Api.Common.Pseudonymization;
 /// navegador envia em <c>POST /api/v1/client-logs</c>). Mesmos padrões e mesma ordem do estágio 4 do pipeline do
 /// Graylog (<c>lgpd-text.rule.tmpl</c>, ADR-0002): e-mail, CNPJ formatado, CPF e celular com DDD. A máscara vem de
 /// <see cref="PersonalDataMasker"/>; texto livre nunca gera token (ADR-0003 do graylog, item 8).
+/// <para>Limite: só o que tem formato reconhecível; nome e endereço em texto livre não são detectados. É a segunda
+/// barreira: a primeira é o frontend não enviar valores digitados.</para>
 /// </summary>
 internal static partial class PersonalDataTextMasker
 {

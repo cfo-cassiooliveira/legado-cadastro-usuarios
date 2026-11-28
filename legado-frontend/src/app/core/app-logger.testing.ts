@@ -8,10 +8,12 @@ export interface LoggerSpy {
   readonly info: ReturnType<typeof vi.fn>;
 }
 
+/** Cria o espião com os três níveis. */
 export function createLoggerSpy(): LoggerSpy {
   return { error: vi.fn(), warning: vi.fn(), info: vi.fn() };
 }
 
+/** Substitui o {@link AppLogger} real pelo espião no TestBed. */
 export function provideLoggerSpy(spy: LoggerSpy): Provider {
   return { provide: AppLogger, useValue: spy };
 }

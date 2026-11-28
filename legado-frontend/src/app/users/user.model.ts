@@ -10,6 +10,7 @@ export interface UserDetails {
   readonly createdAt: string;
 }
 
+/** Endereço dentro de {@link UserDetails}. */
 export interface UserAddress {
   readonly postalCode: string;
   readonly street: string;
@@ -30,6 +31,7 @@ export interface UserSummary {
   readonly createdAt: string;
 }
 
+/** Página de resultados da API. */
 export interface PagedResult<T> {
   readonly items: readonly T[];
   readonly page: number;

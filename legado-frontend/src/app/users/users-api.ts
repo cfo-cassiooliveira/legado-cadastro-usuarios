@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { RegisterUserRequest } from './user.model';
 
+/** Chamadas de usuários à API; a listagem usa `httpResource` com {@link usersPageUrl}. */
 @Injectable({ providedIn: 'root' })
 export class UsersApi {
   private readonly http = inject(HttpClient);

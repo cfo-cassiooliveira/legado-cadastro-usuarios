@@ -9,6 +9,9 @@ namespace Legado.Api.Internal;
 /// Formato da assinatura das chamadas internas (ADR-0005), o mesmo que o Keycloak e o Cadastro implementam:
 /// <c>X-Legado-Signature: keyId=&lt;id&gt;, t=&lt;unix s&gt;, n=&lt;nonce&gt;, v1=&lt;base64(HMAC-SHA256(chave, canônico))&gt;</c>,
 /// com canônico = <c>t \n n \n MÉTODO \n rota+query \n hex(SHA-256(corpo))</c>.
+/// <para>HMAC por chamada, e não chave fixa no header nem token do Keycloak: o Legado não pode depender do Keycloak, e uma
+/// chave fixa capturada seria reutilizável e não protegeria o corpo. Custo: um segredo por chamador para distribuir e
+/// trocar, e o mesmo canônico implementado em três sistemas (por isso os vetores de teste compartilhados).</para>
 /// </summary>
 public static class HmacSignature
 {

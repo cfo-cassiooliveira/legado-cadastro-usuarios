@@ -7,6 +7,8 @@ namespace Legado.Api.Internal;
 /// <summary>
 /// Liga a API interna de migração (ADR-0005): porta HTTPS própria, autenticação HMAC exclusiva do grupo interno e
 /// isolamento por porta (rota interna só na porta interna; a porta interna só serve rotas internas).
+/// <para>Pela porta pública as rotas internas não existem (404); na porta interna valem a assinatura e o TLS.
+/// Custo: certificado de uma CA local para gerar, entregar aos chamadores e renovar.</para>
 /// </summary>
 internal static class InternalApiSetup
 {

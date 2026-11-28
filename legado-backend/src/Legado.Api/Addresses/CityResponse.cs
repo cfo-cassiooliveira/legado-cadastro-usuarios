@@ -3,6 +3,8 @@ using Legado.Domain.Addresses;
 namespace Legado.Api.Addresses;
 
 /// <summary>Município no contrato da API (DTO; desacopla o JSON do Value Object de domínio).</summary>
+/// <param name="IbgeCode">Código do município no IBGE.</param>
+/// <param name="Name">Nome do município.</param>
 internal sealed record CityResponse(int IbgeCode, string Name)
 {
     /// <summary>Converte o município de domínio no DTO de resposta.</summary>

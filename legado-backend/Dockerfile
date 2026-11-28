@@ -1,5 +1,5 @@
 # API do legado. Contexto de build: raiz do repositório (Directory.*.props compartilhados).
-# Versões fixadas por digest (OWASP A03): SDK 10.0.403 / ASP.NET 10.0.14. Atualize tag e digest juntos.
+# Versões fixadas por digest (OWASP A03): SDK 10.0.404 / ASP.NET 10.0.15. Atualize tag e digest juntos.
 FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS build
 WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props .editorconfig ./

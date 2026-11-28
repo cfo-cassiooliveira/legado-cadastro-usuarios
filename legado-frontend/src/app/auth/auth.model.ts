@@ -5,4 +5,5 @@ export interface LoginResponse {
   readonly expiresAt: string;
 }
 
+/** Perfil administrativo, com o mesmo nome usado pelo backend. */
 export const ADMIN_ROLE = 'Admin';

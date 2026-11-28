@@ -10,6 +10,8 @@ namespace Legado.Api.Common.Pseudonymization;
 /// propriedade de topo. Valor fora do formato, ou não escalar (objeto/lista), vira <c>***</c> sem token.
 /// </summary>
 /// <remarks>
+/// <para><b>Por que na origem</b>, e não só no Graylog: os campos conhecidos já saem da API mascarados em qualquer
+/// destino (console ou GELF). Custo: as listas de nomes são repetidas no projeto graylog e precisam andar juntas.</para>
 /// <para><b>Topo do evento</b> (<c>{Cpf}</c> no template, <c>LogContext</c>, escopo com dicionário): o token vai em
 /// <c>Cpf_token</c>, o campo pesquisado pelo Cadastro.</para>
 /// <para><b>Aninhado</b> (<c>{@Customer}</c>, dicionário, lista): mascarado no próprio nível; o token vai no topo do

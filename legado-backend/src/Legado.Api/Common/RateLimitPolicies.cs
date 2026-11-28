@@ -22,7 +22,7 @@ internal static partial class RateLimitPolicies
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
 
     /// <summary>
-    /// Registra as políticas de rate limit por IP para login/cadastro e consultas de endereço, e loga cada rejeição
+    /// Registra as políticas de rate limit por IP (login/cadastro, consultas de endereço e logs do navegador) e loga cada rejeição
     /// (evento de segurança, OWASP A09).
     /// </summary>
     public static IServiceCollection AddLegacyRateLimiting(this IServiceCollection services, IConfiguration configuration)

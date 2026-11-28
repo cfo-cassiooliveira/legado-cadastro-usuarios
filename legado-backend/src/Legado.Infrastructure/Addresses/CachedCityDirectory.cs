@@ -5,7 +5,10 @@ using Microsoft.Extensions.Options;
 
 namespace Legado.Infrastructure.Addresses;
 
-/// <summary>Decorator de cache para o catálogo de municípios (a lista do IBGE muda raramente).</summary>
+/// <summary>
+/// Decorator de cache para o catálogo de municípios (a lista do IBGE muda raramente); o adapter do IBGE cuida só do HTTP.
+/// Custo: cache em memória, por instância, que pode ficar desatualizado até <c>CitiesCacheDuration</c>.
+/// </summary>
 internal sealed class CachedCityDirectory(
     ICityDirectory inner,
     IMemoryCache cache,

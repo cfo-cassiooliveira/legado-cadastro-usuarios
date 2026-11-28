@@ -11,6 +11,8 @@ namespace Legado.Api.Auth;
 /// <summary>
 /// Emite JWT HS256 sem refresh token (ADR-0001), vinculado a um fingerprint de cookie HttpOnly e ao carimbo de
 /// segurança do usuário. O token carrega só hashes desses valores e nenhum dado pessoal além do login.
+/// <para>Sem refresh token não há credencial de longa duração no navegador. Custo: quando o token expira, o usuário
+/// entra de novo.</para>
 /// </summary>
 internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options, TimeProvider timeProvider) : ITokenIssuer
 {

@@ -6,6 +6,7 @@ import { formatMobilePhone, formatPostalCode } from '../shared/masks';
 
 const BRAZIL_COUNTRY_CODE = '+55';
 
+/** Perfil do usuário logado; usa os dados carregados no login, sem nova chamada à API. */
 @Component({
   selector: 'app-profile-page',
   imports: [DatePipe],

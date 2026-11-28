@@ -1,4 +1,5 @@
 using Legado.Application.Addresses;
+using Legado.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -35,7 +36,16 @@ internal sealed partial class GlobalExceptionHandler(
         }
         else
         {
-            LogUnhandled(exception);
+            if (SensitiveDatabaseErrors.CarriesRowValue(exception, out var sqlErrorNumber))
+            {
+                // Exceção à regra de registrar a exceção completa: a mensagem repete dado da linha. O stack trace não repete.
+                LogDatabaseValueRejected(sqlErrorNumber, exception.GetType().Name, exception.StackTrace);
+            }
+            else
+            {
+                LogUnhandled(exception);
+            }
+
             problem = new ProblemDetails
             {
                 Status = StatusCodes.Status500InternalServerError,
@@ -61,4 +71,7 @@ internal sealed partial class GlobalExceptionHandler(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Unhandled exception while processing the request")]
     private partial void LogUnhandled(Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Unhandled database error {SqlErrorNumber} ({ExceptionType}); message omitted because it repeats row data. {StackTrace}")]
+    private partial void LogDatabaseValueRejected(int sqlErrorNumber, string exceptionType, string? stackTrace);
 }

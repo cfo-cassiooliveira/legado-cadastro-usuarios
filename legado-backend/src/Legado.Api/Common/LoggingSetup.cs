@@ -1,6 +1,7 @@
 using Legado.Api.Common.Pseudonymization;
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Events;
 using Serilog.Formatting.Compact;
 using Serilog.Sinks.Graylog;
 using Serilog.Sinks.Graylog.Core.Transport;
@@ -50,6 +51,10 @@ internal static class LoggingSetup
         return services.AddSerilog((sp, logger) =>
         {
             logger.ReadFrom.Configuration(configuration)
+                // Depois da configuração, de propósito: appsettings ou variável de ambiente não religam esta categoria. O EF Core
+                // registra como Error a falha de gravação com a mensagem do SQL Server, que traz o valor duplicado (e-mail, login).
+                // A exceção continua subindo: quem a trata (escritores ou handler global) registra sem o valor.
+                .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Update", LogEventLevel.Fatal)
                 .ReadFrom.Services(sp)
                 .Enrich.FromLogContext()
                 .Enrich.With<TraceContextEnricher>()

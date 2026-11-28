@@ -14,10 +14,11 @@ namespace Legado.Infrastructure.Users;
 /// </summary>
 internal sealed partial class UserMigrationWriter(
     UserManager<ApplicationUser> userManager,
+    LegadoDbContext dbContext,
     TimeProvider timeProvider,
     ILogger<UserMigrationWriter> logger) : IUserMigrationWriter
 {
-    // Máximo de passadas pelo laço quando o Identity informa conflito de concorrência (ConcurrencyStamp).
+    // Passadas quando o Identity informa conflito de concorrência (ConcurrencyStamp): recarrega e tenta de novo.
     private const int MaxAttempts = 3;
 
     /// <summary>Marca a conta como migrada; idempotente para o mesmo usuário do Keycloak.</summary>
@@ -49,6 +50,10 @@ internal sealed partial class UserMigrationWriter(
             {
                 throw new InvalidOperationException($"Legacy user {legacyUserId} could not be marked as migrated after {MaxAttempts} concurrent attempts.");
             }
+
+            // FindByIdAsync devolve a entidade já rastreada, com a marca que não foi gravada e o ConcurrencyStamp antigo:
+            // sem recarregar, a próxima passada a daria como migrada e responderia sucesso sem gravar nada.
+            await dbContext.Entry(user).ReloadAsync(cancellationToken);
         }
     }
 
